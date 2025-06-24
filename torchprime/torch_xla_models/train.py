@@ -83,7 +83,7 @@ def main(config: DictConfig):
   logger.info(f"Profiling server started: {str(server)}")
 
   # TODO(https://github.com/AI-Hypercomputer/torchprime/issues/14): Add tokenizers to torchprime.
-  tokenizer_name = config.model.tokenizer_name
+  tokenizer_name = "TinyLlama/TinyLlama_v1.1" # config.model.tokenizer_name
   tokenizer = retry(lambda: AutoTokenizer.from_pretrained(tokenizer_name))
 
   assert config.torch_dtype == "bfloat16", "Currently only bfloat16 is supported"

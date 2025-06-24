@@ -1,5 +1,5 @@
 import sys
-sys.path.append("~/tpu-experiments")
+sys.path.append("~/tpu-experiments/")
 
 import importlib
 import logging

@@ -37,7 +37,7 @@ lr_scheduler:
 # "Inter-Chip Interconnect".
 ici_mesh:
   data: 1
-  fsdp: 4
+  fsdp: 16
   tensor: 1
   expert: 1
 

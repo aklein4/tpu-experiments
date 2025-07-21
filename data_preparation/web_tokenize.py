@@ -85,9 +85,9 @@ def main(args):
     )
     dataset = dataset.filter(
         lambda x: (
-            x["input_tokens"] is not None and
-            len(x["input_tokens"]) <= MAX_INPUT_LENGTH and
-            len(x["output_tokens"]) <= MAX_OUTPUT_LENGTH
+            x["input_ids"] is not None and
+            len(x["input_ids"]) <= MAX_INPUT_LENGTH and
+            len(x["output_ids"]) <= MAX_OUTPUT_LENGTH
         )
     )
     dataset = dataset.shuffle(seed=42)

@@ -3,7 +3,7 @@
 import datasets
 
 INPUT_REPO = "nvidia/OpenScience"
-SUBSETS = ["OS-Q2.5-32B-4", "OS-Q3-235B-4"]
+SUBSETS = ["OS-Q2.5-32B-4", "OS-Q3-235B-4", "OS-Q2.5-32B-10", "OS-Q2.5-72B-10"]
 
 
 def format_question(question):
@@ -34,15 +34,12 @@ def format_answer(output):
     if len(output) < 50:
         raise ValueError("Output is too short to be a valid answer.")
 
-    correct_ending = False
-    for letter in ['A', 'B', 'C', 'D']:
-        if output.endswith("\\boxed{"+letter+"}"):
-            correct_ending = True
-            break
-    if not correct_ending:
-        raise ValueError("Output does not end with a valid answer format.")
-    
-    answer = output[-2]
+    if "\\boxed{" not in output:
+        raise ValueError("Output does not contain a valid answer format.")
+
+    answer = output.split("\\boxed{")[-1].strip()[0]  # Get the letter inside the boxed format
+    if answer not in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
+        raise ValueError("Answer is not one of the expected options (A, B, C, D, E, F, G, H, I, J).")
 
     return output, answer
 
@@ -81,34 +78,17 @@ def main():
         map_example,
         remove_columns=dataset.column_names,
     )
-
     dataset = dataset.filter(lambda x: x["question"] is not None)
+    dataset = dataset.shuffle(seed=42)
 
     print(f"Loaded {len(dataset)} examples from {INPUT_REPO}!")
 
     dataset.push_to_hub(
-        "aklein4/open-science-formatted",
+        "aklein4/OpenScience-formatted",
         split="train",
     )
 
 
 if __name__ == "__main__":
-    
-    # mcqa = datasets.load_dataset('aklein4/mcqa-synthetic-explanations-lite', split='train')
-    # mcqa = mcqa.map(
-    #     lambda x: {"source": x["source"]+"-synthetic-explanations", "explanation": x["explaination"]},
-    #     remove_columns=["explaination"]
-    # )
-
-    # os = datasets.load_dataset('aklein4/open-science-formatted', split='train')
-
-    # combined = datasets.concatenate_datasets([mcqa, os])
-    # combined = combined.shuffle(seed=42)
-
-    # combined.push_to_hub(
-    #     "mcqa",
-    #     split="train",
-    # )
-
     main()
     

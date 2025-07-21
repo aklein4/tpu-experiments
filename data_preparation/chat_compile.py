@@ -1,29 +1,34 @@
 
 import datasets
-import random
-from functools import partial
 import json
+from tqdm import tqdm
 
 
-def combine_system_prompt(data):
+def format_data(data):
+
     if data[0]["role"] == "system":
-        first = {
-            "content": data[0]["content"].strip() + '\n' + data[1]["content"].strip(),
-            "role": "user"
-        }
+        input_message = f"Instructions:\n{data[0]['content'].strip()}\nQuestion:\n{data[1]['content'].strip()}\nAnswer:\n"
+        
+        try:
+            output_message = data[2]["content"].strip()
+        except:
+            output_message = None
 
-        data = [first] + data[2:]
+    else:
+        input_message = f"Question:\n{data[0]['content'].strip()}\nAnswer:\n"
+        
+        try:
+            output_message = data[1]["content"].strip()
+        except:
+            output_message = None
 
-    return data
+    return input_message, output_message
 
 
 def compilation_map(example):
     data = example["data"]
 
-    data = combine_system_prompt(data)
-    
-    inp = f"Question:\n{data[0]["content"].strip()}\nAnswer:\n"
-    out = data[1]["content"].strip()
+    inp, out = format_data(data)
 
     return {
         "source": example["source"],
@@ -35,10 +40,7 @@ def compilation_map(example):
 def synth_map(example, subset=""):
     data = example["message"]
 
-    data = combine_system_prompt(data)
-
-    inp = f"Question:\n{data[0]["content"].strip()}\nAnswer:\n"
-    out = data[1]["content"].strip()
+    inp, out = format_data(data)
 
     return {
         "source": f'IgnoraZ/SynthQuestions/{subset}',
@@ -59,12 +61,12 @@ def main():
     
     compilation = datasets.load_dataset("aklein4/chat-compilation", split="train")
 
-    with open("C:/Users/adam3/Downloads/realquestions.jsonl", "r", encoding="utf-8") as f:
-        l_real = [json.loads(line) for line in f.readlines()]
+    with open("../local_data/realquestions.jsonl", "r", encoding="utf-8") as f:
+        l_real = [json.loads(line) for line in tqdm(f.readlines(), desc="Loading realquestions")]
     realquestions = datasets.Dataset.from_list(l_real)
     
-    with open("C:/Users/adam3/Downloads/synthquestions_1m.moderated.jsonl", "r", encoding="utf-8") as f:
-        l_synth = [json.loads(line) for line in f.readlines()]
+    with open("../local_data/synthquestions_1m.moderated.jsonl", "r", encoding="utf-8") as f:
+        l_synth = [json.loads(line) for line in tqdm(f.readlines(), desc="Loading synthquestions")]
     synthquestions = datasets.Dataset.from_list(l_synth)
 
     webinstruct = datasets.load_dataset("TIGER-Lab/WebInstructSub", split="train")
@@ -91,6 +93,26 @@ def main():
         webinstruct_map,
         remove_columns=webinstruct.column_names,
     )
+
+    compilation = compilation.filter(
+        lambda x: x["output"] is not None
+    )
+    realquestions = realquestions.filter(
+        lambda x: x["output"] is not None
+    )
+    synthquestions = synthquestions.filter(
+        lambda x: x["output"] is not None
+    )
+    webinstruct = webinstruct.filter(
+        lambda x: x["output"] is not None
+    )
+
+    print("\n")
+    print(f"Loaded {len(compilation)} compilation examples!")
+    print(f"Loaded {len(realquestions)} realquestions examples!")
+    print(f"Loaded {len(synthquestions)} synthquestions examples!")
+    print(f"Loaded {len(webinstruct)} webinstruct examples!")
+    print("\n")
 
     combined = datasets.concatenate_datasets(
         [

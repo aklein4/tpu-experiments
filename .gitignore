@@ -1,3 +1,6 @@
+
+local_data/
+
 # Ignore compiled Python files
 *.pyc
 

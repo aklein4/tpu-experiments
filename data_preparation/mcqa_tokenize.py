@@ -7,6 +7,8 @@ import datasets
 from transformers import LlamaTokenizerFast
 import matplotlib.pyplot as plt
 
+from constants import MAX_INPUT_LENGTH, MAX_OUTPUT_LENGTH
+
 
 TOKENIZER = './tokenizer'
 
@@ -33,7 +35,7 @@ INSTRUCTIONS = [
     "You must provide the letter of the correct answer to the question, followed by an explanation of your reasoning."
 ]
 
-INPUT_REPO = "aklein4/mcqa"
+INPUT_REPO = "aklein4/mcqa-formatted"
 OUTPUT_REPO = "aklein4/mcqa-tokenized"
 
 
@@ -43,7 +45,11 @@ def format_example(example):
     answer = example["answer"]
     explanation = example["explanation"]
 
-    inp = f"Instructions:\n{instruction}\n{question}\nAnswer:\n"
+    if np.random.rand() < 0.5:
+        inp = f"Instructions:\n{instruction}\n{question}\nAnswer:\n"
+    else:
+        inp = f"{question}\nAnswer:\n"
+    
     out_suffix = f"\nExplanation:\n{explanation}"
 
     return inp, out_suffix
@@ -56,17 +62,23 @@ def tokenize_example(example, tokenizer: LlamaTokenizerFast=None):
         inp,
         add_special_tokens=True,
         return_tensors="np",
+        truncation=True,
+        max_length=MAX_INPUT_LENGTH+10
     )[0, :-1]  # Exclude the last token (EOS)
 
     answer_token = tokenizer.encode(
         example["answer"],
         add_special_tokens=False,
         return_tensors="np",
+        truncation=True,
+        max_length=MAX_OUTPUT_LENGTH+10
     )[0]
     output_tokens = tokenizer.encode(
         out_suffix,
         add_special_tokens=True,
         return_tensors="np",
+        truncation=True,
+        max_length=MAX_OUTPUT_LENGTH+10
     )[0, 1:]  # Exclude the first token (BOS)
     output_tokens = np.concatenate([answer_token, output_tokens])
 
@@ -97,7 +109,7 @@ def main():
         remove_columns=["question", "answer", "explanation"],
     )
     dataset = dataset.filter(
-        lambda x: x["num_input_tokens"] <= 768 and x["num_output_tokens"] <= 512
+        lambda x: x["num_input_tokens"] <= MAX_INPUT_LENGTH and x["num_output_tokens"] <= MAX_OUTPUT_LENGTH
     )
 
     dataset.push_to_hub(OUTPUT_REPO, split="train")
@@ -125,7 +137,4 @@ def main():
 
 
 if __name__ == "__main__":
-    import os
-    os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-
     main()

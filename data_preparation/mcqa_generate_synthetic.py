@@ -89,8 +89,12 @@ def main():
     results = [datasets.Dataset.from_dict(r) for r in results]
     final_dataset = datasets.concatenate_datasets(results)
 
+    final_dataset = final_dataset.map(
+        lambda x: {"source": x["source"]+"-synthetic-explanations"},
+    )
+
     print("Pushing combined dataset to Hugging Face Hub...")
-    final_dataset.push_to_hub("mcqa-synthetic-explanations-lite")
+    final_dataset.push_to_hub("mcqa-formatted")
     print("Combined dataset pushed to mcqa_synthetic_explanations")
 
 

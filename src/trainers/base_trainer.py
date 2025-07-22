@@ -283,7 +283,7 @@ class BaseTrainer:
                 epoch += 1
                 train_iterator = iter(train_loader)
                 batch = next(train_iterator)
-            logger.info(f"Process {constants.PROCESS_INDEX()} got batch at step {step}")
+            logger.info(f"Process {constants.PROCESS_INDEX()} got batch {tuple(batch.shape)} at step {step}")
 
             # when context parallel and load balance context parallel is enabled,
             # we will reorder the sequence here for each batch

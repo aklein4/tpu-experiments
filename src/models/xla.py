@@ -157,7 +157,7 @@ class BaseXLAModel(nn.Module):
 
     # Step 6: Convert to safetensors on rank-0 if enabled
     if (
-      convert_to_safetensors and xr.process_index() == 0
+      convert_to_safetensors and xr.process_index() == 1 # use 1 because stupid
     ):
       logger.info("Converting distributed checkpoint to safetensors")
       model_utils.convert_to_safetensors_on_cpu(self, save_dir)

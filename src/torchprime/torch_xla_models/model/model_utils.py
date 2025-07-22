@@ -351,7 +351,7 @@ def convert_to_safetensors_on_cpu(model: torch.nn.Module, save_dir: Path) -> Non
     tmp_dir = tempfile.mkdtemp()
     logger.info("Using default temp directory for safetensors shards: %s", tmp_dir)
 
-  save_sharded_safetensors_by_layer(cpu_state, str(save_dir), tmp_dir=tmp_dir)
+  save_sharded_safetensors_by_layer(cpu_state, str(save_dir))
   logger.info("Safetensors shards + index written to %s", save_dir)
 
 

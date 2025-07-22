@@ -11,9 +11,11 @@ class SingleSequenceCollator:
         self,
         sequence_length: int,
         pad_token_id: int,
+        vocab_size: int,
     ):
         self.sequence_length = sequence_length
         self.pad_token_id = pad_token_id
+        self.vocab_size = vocab_size
 
     
     def __call__(
@@ -51,6 +53,8 @@ class SingleSequenceCollator:
             ],
             dim=1
         )
+
+        input_ids = torch.clip(input_ids, 0, self.vocab_size - 1)
 
         return input_ids
 

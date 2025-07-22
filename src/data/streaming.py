@@ -1,3 +1,5 @@
+from typing import Iterator
+
 import torch
 from torch.utils.data import Dataset
 
@@ -5,6 +7,8 @@ from utils import constants
 
 
 class StreamingDataset(Dataset):
+
+    iter: Iterator
 
     def __init__(self, hf_ds, fake_length=1_000_000):
         self.hf_ds = hf_ds
@@ -21,8 +25,8 @@ class StreamingDataset(Dataset):
         self.iter = iter(self.hf_ds)
 
         for _ in range(constants.PROCESS_INDEX()+1):
-
             out = next(self.iter)
+
         return out
 
 

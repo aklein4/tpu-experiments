@@ -10,4 +10,5 @@ collator_kwargs:
 
     sequence_length: 1024
     pad_token_id: 32000
+    vocab_size: 32001
     

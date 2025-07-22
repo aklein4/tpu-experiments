@@ -3,6 +3,8 @@
 import datasets
 import os
 
+from utils import constants
+
 
 def get_dataset(name: str, **kwargs) -> datasets.Dataset:
     """
@@ -14,4 +16,4 @@ def get_dataset(name: str, **kwargs) -> datasets.Dataset:
     Returns:
         datasets.Dataset: The requested dataset.
     """
-    return datasets.load_dataset(name, **kwargs, token=os.environ['HF_TOKEN'])
+    return datasets.load_dataset(name, **kwargs, token=constants.HF_TOKEN)

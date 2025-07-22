@@ -31,7 +31,8 @@ export PATH="/home/$USER/.local/bin:$PATH"
 pip install transformers datasets matplotlib huggingface_hub wandb hydra-core omegaconf
 
 # login to huggingface
-huggingface-cli login --token $1 --add-to-git-credential
+# huggingface-cli login --token $1 --add-to-git-credential
+export HF_TOKEN=$1
 
 # login to wandb
 python -m wandb login $2

@@ -283,7 +283,6 @@ class BaseTrainer:
                 epoch += 1
                 train_iterator = iter(train_loader)
                 batch = next(train_iterator)
-            logger.info("Loaded batch for step %d", step)
 
             # when context parallel and load balance context parallel is enabled,
             # we will reorder the sequence here for each batch
@@ -297,12 +296,10 @@ class BaseTrainer:
                     )
                     for key, value in batch.items()
                 }
-            logger.info("Prepared batch for training for step %d", step)
 
             trace_start_time = timer()
             loss, aux = self.train_step(batch)
             trace_end_time = timer()
-            logger.info("Finished training step for step %d", step)
 
             def step_closure(
                 epoch, step, loss, aux, trace_start_time, trace_end_time, lr
@@ -331,13 +328,10 @@ class BaseTrainer:
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb)
-                logger.info("Logged metrics to wandb for step %d", step)
 
-                # if math.isnan(loss):
-                #     raise ValueError(f"Loss is NaN at step {step}")
+                if math.isnan(loss):
+                    raise ValueError(f"Loss is NaN at step {step}")
                 
-                logger.info("Step closure finished for step %d", step)
-
             xm.add_step_closure(
                 step_closure,
                 args=(
@@ -355,10 +349,10 @@ class BaseTrainer:
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
             
-            xm.rendezvous("end_of_step")
+            xm.rendezvous(f"end_of_step {step}")
             xm.mark_step()
             xm.wait_device_ops()
-            logger.info("Marked step for step %d", step)
+            xm.rendezvous(f"after_step {step}")
 
         xm.wait_device_ops()
         logger.info("Finished training run")

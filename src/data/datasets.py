@@ -1,6 +1,7 @@
 
 
 import datasets
+import os
 
 
 def get_dataset(name: str, **kwargs) -> datasets.Dataset:
@@ -13,4 +14,4 @@ def get_dataset(name: str, **kwargs) -> datasets.Dataset:
     Returns:
         datasets.Dataset: The requested dataset.
     """
-    return datasets.load_dataset(name, **kwargs)
+    return datasets.load_dataset(name, **kwargs, token=os.environ['HF_TOKEN'])

@@ -133,16 +133,17 @@ class BaseTrainer:
 
             # create the huggingface save repo
             self.repo_name = f"{constants.HF_ID}/{self.config.project}_{self.config.name}"
-            hf.create_repo(
-                self.repo_name, private=True, exist_ok=True
-            )
+            if constants.XLA_MAIN():
+                hf.create_repo(
+                    self.repo_name, private=True, exist_ok=True, token=os.environ['HF_TOKEN']
+                )
 
-            # create the wandb project
-            wandb.init(
-                project=self.config.project,
-                name=self.config.name,
-                notes=self.config.notes,
-            )
+                # create the wandb project
+                wandb.init(
+                    project=self.config.project,
+                    name=self.config.name,
+                    notes=self.config.notes,
+                )
 
         # Execute all initialization work queued so far before starting training.
         torch_xla.sync()
@@ -237,7 +238,7 @@ class BaseTrainer:
         self,
         step: int,
     ):
-        if self.config.debug:
+        if self.config.debug or not constants.XLA_MAIN():
             return
 
         save_path = os.path.join(
@@ -256,7 +257,8 @@ class BaseTrainer:
             repo_id=self.save_repo,
             folder_path=save_path,
             path_in_repo=out_path,
-            repo_type="model"
+            repo_type="model",
+            token=os.environ['HF_TOKEN'],
         )
 
         os.removedirs(save_path)

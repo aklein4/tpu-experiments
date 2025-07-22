@@ -1,9 +1,7 @@
 
-
 import datasets
 import os
 
-from data.streaming import StreamingDataset
 from utils import constants
 
 
@@ -20,7 +18,7 @@ def get_dataset(name: str, **kwargs) -> datasets.Dataset:
     ds = datasets.load_dataset(name, **kwargs, token=constants.HF_TOKEN)
 
     if "streaming" in kwargs.keys() and kwargs["streaming"]:
-        ds = StreamingDataset(ds)
+        ds = ds.shard(num_shards=constants.PROCESS_COUNT(), index=constants.PROCESS_INDEX())
 
     return ds
 

@@ -36,10 +36,12 @@ class StreamingDataset(Dataset):
                 out = next(self.iter)
 
         except StopIteration:
-            out = self._init_iter()
+            raise StopIteration("End of dataset reached.")
+            # out = self._init_iter()
 
         return out
 
 
     def __getitem__(self, idx):
         return self._next_iter()
+    

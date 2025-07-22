@@ -188,21 +188,23 @@ class BaseTrainer:
         num_replicas = xr.process_count()
         logger.info("Num replicas: %d", num_replicas)
 
-        if self.minibatch:
-            sampler = torch.utils.data.DistributedSampler(
-                self.train_dataset,
-                num_replicas=num_replicas,
-                rank=xr.process_index(),
-                shuffle=False,
-            )
-        else:
-            # Without minibatch, every process loads the global batch the same way.
-            sampler = torch.utils.data.DistributedSampler(
-                self.train_dataset,
-                num_replicas=1,
-                rank=0,
-                shuffle=False,
-            )
+        # if self.minibatch:
+        #     sampler = torch.utils.data.DistributedSampler(
+        #         self.train_dataset,
+        #         num_replicas=num_replicas,
+        #         rank=xr.process_index(),
+        #         shuffle=False,
+        #         drop_last=True,
+        #     )
+        # else:
+        #     # Without minibatch, every process loads the global batch the same way.
+        #     sampler = torch.utils.data.DistributedSampler(
+        #         self.train_dataset,
+        #         num_replicas=1,
+        #         rank=0,
+        #         shuffle=False,
+        #         drop_last=True,
+        #     )
 
         assert self.global_batch_size is not None
         if self.minibatch:
@@ -220,9 +222,9 @@ class BaseTrainer:
             self.train_dataset,
             collate_fn=collator,
             batch_size=batch_size,
-            sampler=sampler,
-            drop_last=True,
+            # sampler=sampler,
             shuffle=False
+            drop_last=True,
         )
         loader = pl.MpDeviceLoader(
             dataloader, self.device, input_sharding=self.input_sharding_spec

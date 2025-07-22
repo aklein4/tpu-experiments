@@ -2,7 +2,7 @@ import torch
 from torch.nn import CrossEntropyLoss
 
 
-def cross_entropy_loss(logits: torch.Tensor, labels: torch.Tensor, vocab_size: int):
+def cross_entropy_loss(logits: torch.Tensor, labels: torch.Tensor, vocab_size: int, ignore_index: int = -100) -> torch.Tensor:
   """
   Computes cross entropy loss of `logits` against the ground truth `labels` during
   next token prediction.
@@ -13,7 +13,7 @@ def cross_entropy_loss(logits: torch.Tensor, labels: torch.Tensor, vocab_size: i
   shift_logits = logits[..., :-1, :].contiguous()
   shift_labels = labels[..., 1:].contiguous()
   # Flatten the tokens
-  loss_fct = CrossEntropyLoss()
+  loss_fct = CrossEntropyLoss(ignore_index=ignore_index)
   shift_logits = shift_logits.view(-1, vocab_size)
   shift_labels = shift_labels.view(-1)
   shift_labels = shift_labels.to(shift_logits.device)

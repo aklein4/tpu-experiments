@@ -273,7 +273,7 @@ class BaseTrainer:
         # For now we assume that we will never train for more than one epoch
         max_step = self.config.trainer.max_steps
         train_loader = self._get_train_dataloader()
-        steps_per_epoch = len(train_loader)
+        steps_per_epoch = max_step
         train_iterator = iter(train_loader)
 
         logger.info("Starting training")

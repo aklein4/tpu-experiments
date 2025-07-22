@@ -37,9 +37,9 @@ def main(config: omegaconf.DictConfig):
     # config_vaidator(config)
 
     # Print the config for debugging
-    print(" ===== Configuration ===== ", flush=True)
+    print("\n ===== Configuration ===== \n", flush=True)
     print(omegaconf.OmegaConf.to_yaml(config), flush=True)
-    print(" ========================= ", flush=True)
+    print("\n ========================= \n", flush=True)
 
     # set up logging
     log_level = logging.INFO
@@ -48,10 +48,12 @@ def main(config: omegaconf.DictConfig):
     transformers.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
+    print(f"Logging level set to: {log_level}", flush=True)
 
     # set training seeds
     transformers.set_seed(config.seed)
     torch_xla.manual_seed(config.seed)
+    print(f"Set training seed to: {config.seed}", flush=True)
 
     # Set the model dtype to bfloat16, and set the default device to the XLA device.
     # This will capture the model constructor into a graph so that we can add
@@ -61,12 +63,15 @@ def main(config: omegaconf.DictConfig):
     with model_utils.set_default_dtype(model_dtype), torch_xla.device():
         model_cls = import_class(config.model.model_class, constants.MODEL_MODULE)
         model = model_cls(config.model)
+    print(f"Model class initialized: {config.model.model_class}", flush=True)
 
     # print model information
     model_utils.log_parameter_breakdown(model, logger, simple=True)
+    print("Model parameter breakdown logged.", flush=True)
 
     # Create the dataset
     data = get_dataset(**config.dataset)
+    print(f"Dataset loaded: {config.dataset.name}", flush=True)
 
     # initialize the trainer
     trainer_cls = import_class(config.trainer.trainer_class, constants.TRAINER_MODULE)
@@ -75,8 +80,10 @@ def main(config: omegaconf.DictConfig):
         config=config,
         train_dataset=data,
     )
+    print(f"Trainer initialized: {config.trainer.trainer_class}", flush=True)
 
     # TODO(https://github.com/pytorch/xla/issues/8954): Remove `jax_env_context`.
+    print("Starting training loop...", flush=True)
     with torch_xla._internal.jax_workarounds.jax_env_context():
         trainer.train_loop()
 

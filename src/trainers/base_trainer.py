@@ -238,10 +238,10 @@ class BaseTrainer:
             "tmp_checkpoint",
         )
 
-        self.model._maybe_save_checkpoint(save_path, convert_to_safetensors=True)
+        self.model._maybe_save_checkpoint(save_path, convert_to_safetensors=False)
         logger.info(f"Saved checkpoint to {save_path} at step {step}")
 
-        if constants.PROCESS_INDEX() == 1: 
+        if constants.PROCESS_INDEX() == 0: 
 
             api = hf.HfApi()
             out_path = f"{step:012d}"
@@ -347,7 +347,7 @@ class BaseTrainer:
             )
         
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
-                self.save_checkpoint(step)
+                self.save_checkpoint(step+1)
                  
         xm.wait_device_ops()
         logger.info("Finished training run")

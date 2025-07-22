@@ -231,22 +231,20 @@ class BaseTrainer:
         self,
         step: int,
     ):
-        xm.rendezvous("before_save_checkpoint")
+        logger.info("[SAVING] Starting distributed checkpoint...")
 
-        if not self.config.debug and constants.PROCESS_IS_MAIN():
+        save_path = os.path.join(
+            constants.LOCAL_DATA_PATH,
+            "tmp_checkpoint",
+        )
+        
+        self.model._maybe_save_checkpoint(save_path, convert_to_safetensors=True)
+        logger.info(f"Saved checkpoint to {save_path} at step {step}")
 
-            logger.info("[SAVING] Starting distributed checkpoint...")
+        api = hf.HfApi()
+        out_path = f"{step:012d}"
 
-            save_path = os.path.join(
-                constants.LOCAL_DATA_PATH,
-                "tmp_checkpoint",
-            )
-            self.model.export(save_path)
-            logger.info(f"Saved checkpoint to {save_path} at step {step}")
-
-            api = hf.HfApi()
-            out_path = f"{step:012d}"
-                
+        if constants.PROCESS_IS_MAIN(): 
             api.upload_folder(
                 repo_id=self.save_repo,
                 folder_path=save_path,
@@ -256,11 +254,9 @@ class BaseTrainer:
             )
             logger.info(f"Uploaded checkpoint to {self.save_repo}/{out_path}")
 
-            shutil.rmtree(save_path)
-
-            logger.info("[SAVING] Finished distributed checkpoint.")      
-
-        xm.rendezvous("after_save_checkpoint")
+        shutil.rmtree(save_path, ignore_errors=True)
+        
+        logger.info("[SAVING] Finished distributed checkpoint.")      
     
 
     def train_loop(self) -> None:
@@ -350,8 +346,6 @@ class BaseTrainer:
             )
         
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
-                torch_xla.sync()
-                xm.wait_device_ops()
                 self.save_checkpoint(step)
                  
         xm.wait_device_ops()

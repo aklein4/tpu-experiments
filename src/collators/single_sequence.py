@@ -24,8 +24,8 @@ class SingleSequenceCollator:
         input_ids = []
         for x in batch:
 
-            in_ids = torch.tensor(x["input_ids"]).long().flatten()
-            out_ids = torch.tensor(x["output_ids"]).long().flatten()
+            in_ids = torch.tensor(x["input_ids"]).long().reshape(-1)
+            out_ids = torch.tensor(x["output_ids"]).long().reshape(-1)
 
             input_ids.append(torch.cat([in_ids, out_ids], dim=0))
         

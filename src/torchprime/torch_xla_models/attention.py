@@ -42,7 +42,13 @@ class AttentionModule(nn.Module):
     key_states: torch.Tensor,  # (batch_size, num_kv_heads, kv_len, head_dim)
     value_states: torch.Tensor,  # (batch_size, num_kv_heads, kv_len, head_dim)
     attention_mask: torch.Tensor | None = None,
+    segment_ids: torch.LongTensor | None = None,
   ):
+    if segment_ids is not None:
+      assert self.config.attention_kernel == "flash_attention", (
+        "Segment ids are only supported with Flash Attention kernel"
+      )
+
     if self.config.attention_kernel != "splash_attention":
       num_key_value_groups = (
         self.config.num_attention_heads // self.config.num_key_value_heads
@@ -145,6 +151,8 @@ class AttentionModule(nn.Module):
           query_states,
           key_states,
           value_states,
+          q_segment_ids=segment_ids,
+          kv_segment_ids=segment_ids,
           causal=True,
           partition_spec=self.partition_spec,
         )

@@ -1,9 +1,9 @@
 
 ### Repo Setup
  - [x] Port torchprime
- - [ ] Implement data loading/collating
+ - [x] Implement data loading/collating
     - [x] non-streaming (small dataset)
-    - [ ] streaming (large dataset)
+    - [x] streaming (large dataset)
  - [x] Add wandb logging
  - [x] Check inter-device syncing
  - [ ] Implement checkpoint saving
@@ -12,6 +12,8 @@
  - [ ] Implement checkpoint loading
 
 ### LLM
+ - [x] Modify Llama to have combined qkv/gate_up for later mods
+ - [x] Mask in attention (with segment ids)
  - [ ] Implement LLM loss
     - [x] Mask loss with padding
     - [ ] log acc
@@ -21,8 +23,8 @@
 ### ZLM
  - [ ] Implement ZLM Model
     - [ ] LoRa QKV and up/gate
-    - [ ] Mask pad in attention with QK bias elements
     - [ ] Account for pad in position_ids
+    - [ ] segment_ids from pad
     - [ ] Implement Decoder
     - [ ] Implement Generator
     - [ ] Implement Encoder

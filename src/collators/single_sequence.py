@@ -33,7 +33,7 @@ class SingleSequenceCollator:
             # input_ids.append(in_ids)
 
         input_ids = [
-            torch.arange(np.random.randint(0, 100), dtype=torch.long) for _ in range(bs)
+            torch.arange(np.random.randint(10, 100), dtype=torch.long) for _ in range(bs)
         ]
 
         # pad to length

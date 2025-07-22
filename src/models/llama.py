@@ -376,13 +376,20 @@ class LlamaModel(nn.Module):
 class LlamaForCausalLM(BaseXLAModel):
   def __init__(self, config):
     super().__init__()
+    print("supered", flush=True)
+
     self.config = config
     self.model = LlamaModel(config)
+    print("LlamaModel initialized", flush=True)
+
     self.vocab_size = config.vocab_size
     self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+    print("lm_head initialized", flush=True)
 
     # Initialize weights and apply final processing
     self.apply(self._init_weights)
+    print("Weights initialized", flush=True)
+    
 
   @xp.trace_me("LlamaForCausalLM")
   def forward(

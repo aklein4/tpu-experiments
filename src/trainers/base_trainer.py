@@ -353,7 +353,7 @@ class BaseTrainer:
 
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, torch.Tensor]:
-        loss, aux = self.forward(**batch)
+        loss, aux = self.forward(batch)
         
         loss.backward()
         

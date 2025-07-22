@@ -5,12 +5,11 @@ from trainers.base_trainer import BaseTrainer
 
 class LLMTrainer(BaseTrainer):
 
-    def forward(self, input_ids, mask):
-        print(f" ==== {input_ids.shape} ==== ", flush=True)
+    def forward(self, batch):
 
         _logits, loss = self.model(
-            input_ids=input_ids,
-            labels=input_ids,
+            input_ids=batch["input_ids"],
+            labels=batch["input_ids"],
         )
 
         return loss, {}

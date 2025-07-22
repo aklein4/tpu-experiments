@@ -51,8 +51,6 @@ class SingleSequenceCollator:
             device=input_ids.device
         )
 
-        print(input_ids.shape, pad.shape, flush=True)
-
         input_ids = torch.cat(
             [
                 input_ids,

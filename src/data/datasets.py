@@ -20,4 +20,7 @@ def get_dataset(name: str, **kwargs) -> datasets.Dataset:
     ds = datasets.load_dataset(name, **kwargs, token=constants.HF_TOKEN)
 
     if "streaming" in kwargs.keys() and kwargs["streaming"]:
-        return StreamingDataset(ds)
+        ds = StreamingDataset(ds)
+
+    return ds
+

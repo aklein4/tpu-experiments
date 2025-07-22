@@ -209,8 +209,8 @@ class BaseTrainer:
             batch_size = self.global_batch_size
 
         # handle the collator
-        collator_cls = import_class(self.config.data.collator.collator_class, constants.COLLATOR_MODULE)
-        collator = collator_cls(**self.config.data.collator)
+        collator_cls = import_class(self.config.data.collator_class, constants.COLLATOR_MODULE)
+        collator = collator_cls(**self.config.data.collator_kwargs)
 
         dataloader = DataLoader(
             self.train_dataset,

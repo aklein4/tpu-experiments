@@ -1,11 +1,13 @@
 
-name: aklein4/mixed-pretraining-tokenized-mini
-split: train
+dataset:
+    name: aklein4/mixed-pretraining-tokenized-mini
+    split: train
 
-streaming: false
+    streaming: false
 
-collator:
-    collator_class: single_sequence.SingleSequenceCollator
+collator_class: single_sequence.SingleSequenceCollator
+collator_kwargs:
 
     sequence_length: 1024
     pad_token_id: 32000
+    

@@ -11,7 +11,6 @@ class SingleSequenceCollator:
         self,
         sequence_length: int,
         pad_token_id: int,
-        **kwargs,
     ):
         self.sequence_length = sequence_length
         self.pad_token_id = pad_token_id

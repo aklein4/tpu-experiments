@@ -12,25 +12,40 @@ Example:
     . setup_vm.sh <HF_TOKEN> <WANDB_TOKEN>
 '
 
-# upgrade pip to get higher torch_xla version
-python -m pip install pip --upgrade
+# install miniconda
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm ~/miniconda3/miniconda.sh
+
+# activate conda
+source ~/miniconda3/bin/activate
+conda init --all
+
+# create conda environment
+conda create -n tpu -y python=3.13
+conda activate tpu
+
+# upgrade and update pip
+conda install -y pip
+pip install --upgrade pip
 
 # install torch
 pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu
 
 # install torch_xla for TPU VM
 # Edit `cp310-cp310` to fit your desired Python version as needed
-pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.9.0.dev-cp310-cp310-linux_x86_64.whl' \
+pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.9.0.dev-cp313-cp313-linux_x86_64.whl' \
   -f https://storage.googleapis.com/libtpu-wheels/index.html
 
 # update path(?)
 export PATH="/home/$USER/.local/bin:$PATH"
 
 # install extras
-pip install transformers datasets wandb matplotlib huggingface_hub hydra-config omegaconfig 
+pip install transformers datasets matplotlib huggingface_hub wandb hydra-core omegaconfig 
 
 # uninstall tensorflow if needed
-pip uninstall -y tensorflow; pip install tensorflow-cpu
+# pip uninstall -y tensorflow; pip install tensorflow-cpu
 
 # login to huggingface
 huggingface-cli login --token $1 --add-to-git-credential

@@ -21,6 +21,9 @@ PROCESS_INDEX = lambda: xr.process_index()
 # whether this is the main process on its device
 PROCESS_IS_MAIN = lambda: xr.process_index() == 0
 
+# local data path
+LOCAL_DATA_PATH = os.path.join(BASE_PATH, "local_data")
+
 # paths to config files
 CONFIG_PATH = os.path.join(BASE_PATH, "configs")
 

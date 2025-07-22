@@ -14,6 +14,7 @@ import logging
 import math
 import os
 from timeit import default_timer as timer
+import shutil
 
 import torch
 import torch.nn.utils as nn_utils
@@ -51,6 +52,7 @@ import huggingface_hub as hf
 from models.xla import BaseXLAModel
 from utils.import_utils import import_class
 from utils import constants
+
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +122,7 @@ class BaseTrainer:
         )
 
         # create the local data path
-        if not self.config.debug:
+        if not self.config.debug and constants.PROCESS_IS_MAIN():
             os.makedirs(constants.LOCAL_DATA_PATH, exist_ok=True)
 
             # create the huggingface save repo
@@ -185,7 +187,6 @@ class BaseTrainer:
 
         num_replicas = xr.process_count()
         logger.info("Num replicas: %d", num_replicas)
-        logger.info(f" === CURRENT PROCESS INDEX: {xr.process_index()} === ")
 
         if self.minibatch:
             sampler = torch.utils.data.DistributedSampler(
@@ -215,7 +216,6 @@ class BaseTrainer:
 
         dataloader = DataLoader(
             self.train_dataset,
-            # Data collator will default to DataCollatorWithPadding, so we change it.
             collate_fn=collator,
             batch_size=batch_size,
             sampler=sampler,
@@ -238,10 +238,8 @@ class BaseTrainer:
             constants.LOCAL_DATA_PATH,
             "tmp_checkpoint",
         )
-        self.model._maybe_save_checkpoint(
-            save_path,
-            convert_to_safetensors=self.config.trainer.convert_to_safetensors,
-        )
+        self.model.export(save_path)
+        logger.info(f"Saved checkpoint to {save_path} at step {step}")
 
         api = hf.HfApi()
         out_path = f"{step:012d}"
@@ -253,8 +251,9 @@ class BaseTrainer:
             repo_type="model",
             token=os.environ['HF_TOKEN'],
         )
+        logger.info(f"Uploaded checkpoint to {self.save_repo}/{out_path}")
 
-        os.removedirs(save_path)
+        shutil.rmtree(save_path)
 
 
     def train_loop(self) -> None:
@@ -343,10 +342,10 @@ class BaseTrainer:
                 run_async=True,
             )
         
-        if step % self.config.trainer.checkpoint_interval == 0:    
-            logger.info("[SAVING] Starting distributed checkpoint …")
-            self.model._maybe_save_checkpoint(self.config)
-            logger.info("[SAVING] Finished distributed checkpoint")       
+            if step % self.config.trainer.checkpoint_interval == 0:    
+                logger.info("[SAVING] Starting distributed checkpoint …")
+                self.save_checkpoint(step)
+                logger.info("[SAVING] Finished distributed checkpoint.")       
 
         xm.wait_device_ops()
         logger.info("Finished training run")
@@ -354,6 +353,7 @@ class BaseTrainer:
 
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, torch.Tensor]:
+        
         loss, aux = self.forward(batch)
         
         loss.backward()

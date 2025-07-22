@@ -1,6 +1,6 @@
 
 dataset:
-    name: aklein4/mixed-pretraining-tokenized-mini
+    name: aklein4/mixed-pretraining-tokenized
     split: train
 
     streaming: true

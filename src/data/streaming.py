@@ -8,25 +8,34 @@ class StreamingDataset(Dataset):
 
     def __init__(self, hf_ds, fake_length=1_000_000):
         self.hf_ds = hf_ds
-
         self.fake_length = fake_length
 
-        self.iter = iter(self.hf_ds)
-        self.seen_ids = set()
+        self.iter = self._init_iter()
 
     
     def __len__(self):
         return self.fake_length
     
 
-    def __getitem__(self, idx):
-        print(f"[{constants.PROCESS_INDEX()}] Accessing index {idx} in StreamingDataset", flush=True)
+    def _init_iter(self):
+        self.iter = iter(self.hf_ds)
 
-        # if idx in self.seen_ids:
-        #     raise ValueError(f"Index {idx} has already been seen. This dataset does not support repeated access to the same index.")
+        for _ in range(constants.PROCESS_INDEX()+1):
 
+            out = next(self.iter)
+        return out
+
+
+    def _next_iter(self):
         try:
-            return next(self.iter)
+            for _ in range(constants.PROCESS_COUNT()):
+                out = next(self.iter)
+
         except StopIteration:
-            self.iter = iter(self.hf_ds)
-            return next(self.iter)
+            out = self._init_iter()
+
+        return out
+
+
+    def __getitem__(self, idx):
+        return self._next_iter()

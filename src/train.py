@@ -32,8 +32,6 @@ assert xr.is_spmd() is True
 @hydra.main(version_base=None, config_path="configs", config_name="default")
 def main(config: omegaconf.DictConfig):
 
-    print(constants.HF_TOKEN, flush=True)
-
     # Validate the config to avoid misuse and feature combination
     # Adding any new feature should update the config validator to
     # ensure different features can be combined together

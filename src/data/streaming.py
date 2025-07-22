@@ -9,7 +9,7 @@ class StreamingDataset(Dataset):
     def __init__(self, hf_ds, fake_length=1_000_000):
         self.hf_ds = hf_ds
 
-        self.fake_length = self.fake_length
+        self.fake_length = fake_length
 
         self.iter = iter(self.hf_ds)
         self.seen_ids = set()

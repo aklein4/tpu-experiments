@@ -127,7 +127,7 @@ class BaseTrainer:
 
             # create the huggingface save repo
             self.repo_name = f"{constants.HF_ID}/{self.config.project}_{self.config.name}"
-            if constants.XLA_MAIN():
+            if constants.PROCESS_IS_MAIN():
                 hf.create_repo(
                     self.repo_name, private=True, exist_ok=True, token=os.environ['HF_TOKEN']
                 )
@@ -231,7 +231,7 @@ class BaseTrainer:
         self,
         step: int,
     ):
-        if self.config.debug or not constants.XLA_MAIN():
+        if self.config.debug or not constants.PROCESS_IS_MAIN():
             return
 
         save_path = os.path.join(

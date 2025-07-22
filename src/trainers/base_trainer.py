@@ -346,7 +346,7 @@ class BaseTrainer:
                 run_async=True,
             )
         
-            if step % self.config.trainer.checkpoint_interval == 0:    
+            if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 torch_xla.sync()
                 self.save_checkpoint(step)
                  

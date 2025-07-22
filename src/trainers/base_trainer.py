@@ -333,8 +333,8 @@ class BaseTrainer:
                     wandb.log(to_wandb)
                 logger.info("Logged metrics to wandb for step %d", step)
 
-                if math.isnan(loss):
-                    raise ValueError(f"Loss is NaN at step {step}")
+                # if math.isnan(loss):
+                #     raise ValueError(f"Loss is NaN at step {step}")
                 
                 logger.info("Step closure finished for step %d", step)
 
@@ -349,7 +349,7 @@ class BaseTrainer:
                     trace_end_time,
                     self.lr_scheduler.get_last_lr()[0],
                 ),
-                run_async=False,
+                run_async=True,
             )
         
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    

@@ -118,7 +118,7 @@ class BaseTrainer:
             name=self.config.trainer.lr_scheduler.type,
             optimizer=self.optimizer,
             num_warmup_steps=self.config.trainer.lr_scheduler.warmup_steps,
-            num_training_steps=self.config.trainer.max_steps,
+            num_training_steps=self.config.trainer.lr_scheduler.training_steps,
         )
 
         # create the local data path

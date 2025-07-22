@@ -16,6 +16,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from pathlib import Path
+from tqdm import tqdm
 
 import huggingface_hub
 import safetensors
@@ -77,7 +78,7 @@ def save_sharded_safetensors_by_layer(
   state_dict: dict[str, torch.Tensor],
   save_dir: str | os.PathLike,
   *,
-  max_workers: int = 24,
+  max_workers: int = 1,
   tmp_dir: str | os.PathLike | None = None,
 ):
   """Save a model state dict to sharded safetensors by layer prefix.
@@ -121,9 +122,20 @@ def save_sharded_safetensors_by_layer(
   # sort largest → smallest so threads finish together
   items = sorted(grouped.items(), key=lambda kv: sizes[kv[0]], reverse=True)
 
-  weight_map: dict[str, str] = {}
-  with ThreadPoolExecutor(max_workers=max_workers) as pool:
-    for mapping in pool.map(_write_one, items):
+  # multithreaded write
+  if max_workers > 1:
+    
+    weight_map: dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+      for mapping in pool.map(_write_one, items):
+        weight_map.update(mapping)
+  
+  # single-threaded write
+  else:
+    
+    weight_map = {}
+    for prefix, group in tqdm(grouped.items(), desc="Writing safetensors shards"):
+      mapping = _write_one((prefix, group))
       weight_map.update(mapping)
 
   # ---------- dump index --------------------------------------------

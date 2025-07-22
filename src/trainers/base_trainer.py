@@ -234,6 +234,8 @@ class BaseTrainer:
         if self.config.debug or not constants.PROCESS_IS_MAIN():
             return
 
+        logger.info("[SAVING] Starting distributed checkpoint...")
+
         save_path = os.path.join(
             constants.LOCAL_DATA_PATH,
             "tmp_checkpoint",
@@ -254,6 +256,8 @@ class BaseTrainer:
         logger.info(f"Uploaded checkpoint to {self.save_repo}/{out_path}")
 
         shutil.rmtree(save_path)
+
+        logger.info("[SAVING] Finished distributed checkpoint.")      
 
 
     def train_loop(self) -> None:
@@ -343,10 +347,9 @@ class BaseTrainer:
             )
         
             if step % self.config.trainer.checkpoint_interval == 0:    
-                logger.info("[SAVING] Starting distributed checkpoint …")
+                torch_xla.sync()
                 self.save_checkpoint(step)
-                logger.info("[SAVING] Finished distributed checkpoint.")       
-
+                 
         xm.wait_device_ops()
         logger.info("Finished training run")
 

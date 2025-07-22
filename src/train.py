@@ -20,6 +20,7 @@ from torchprime.torch_xla_models.utils.config_utils import config_vaidator
 from data.datasets import get_dataset
 from utils import constants
 from utils.import_utils import import_class
+from utils.logging_utils import OnlyMain
 
 transformers.utils.check_min_version("4.39.3")
 logger = logging.getLogger(__name__)
@@ -90,15 +91,14 @@ def main(config: omegaconf.DictConfig):
 if __name__ == "__main__":
 
     # only log to stdout if this is the main process
-    pipe = open(os.devnull, 'w')
-    if constants.PROCESS_IS_MAIN():
-        pipe = sys.stdout
+    handler = logging.StreamHandler(sys.stdout)
+    handler.addFilter(OnlyMain())
 
     # set up logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
-        handlers=[logging.StreamHandler(pipe)],
+        handlers=[handler],
     )
     
     sys.exit(main())

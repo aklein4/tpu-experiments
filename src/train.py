@@ -31,15 +31,18 @@ assert xr.is_spmd() is True
 @hydra.main(version_base=None, config_path="configs", config_name="default")
 def main(config: omegaconf.DictConfig):
 
-    mess = " ===== DEVICE INFO ===== \n"
-    mess += f"XLA_DEVICE: {constants.XLA_DEVICE()}\n"
-    # mess += f"XLA_LOCAL_RANK: {constants.XLA_LOCAL_RANK()}\n"
-    # mess += f"XLA_RANK: {constants.XLA_RANK()}\n"
-    mess += f"XLA_LOCAL_MAIN: {constants.XLA_LOCAL_MAIN()}\n"
-    mess += f"XLA_MAIN: {constants.XLA_MAIN()}\n"
-    mess += f"NUM_XLA_DEVICES: {constants.NUM_XLA_DEVICES()}\n"
-    mess += f"NUM_PROCESSES: {xr.process_count()}\n"
-    mess += f"PROCCESS_INDEX: {xr.process_index()}\n"
+    mess = " ========= INFO ========= \n"
+    mess += f"device_type: {xr.device_type()}\n"
+    mess += f"local_process_count: {xr.local_process_count()}\n"
+    mess += f"local_device_count: {xr.local_device_count()}\n"
+    mess += f"addressable_device_count: {xr.addressable_device_count()}\n"
+    mess += f"glocal_device_count: {xr.global_device_count()}\n"
+    mess += f"global_runtime_device_count: {xr.global_runtime_device_count()}\n"
+    mess += f"world_size: {xr.world_size()}\n"
+    mess += f"global_ordinal: {xr.global_ordinal()}\n"
+    mess += f"local_ordinal: {xr.local_ordinal()}\n"
+    mess += f"is_master_ordinal (local): {torch_xla.core.xla_model.is_master_ordinal(local=True)}\n"
+    mess += f"is_master_ordinal (global): {torch_xla.core.xla_model.is_master_ordinal(local=False)}\n"
     mess += " ======================= "
     print(mess, flush=True)
 

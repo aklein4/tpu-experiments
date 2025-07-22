@@ -253,7 +253,7 @@ class BaseTrainer:
                 repo_type="model",
                 token=os.environ['HF_TOKEN'],
             )
-            logger.info(f"Uploaded checkpoint to {self.save_repo}/{out_path}")
+            logger.info(f"Uploaded checkpoint to {self.repo_name}/{out_path}")
 
         shutil.rmtree(save_path, ignore_errors=True)
         

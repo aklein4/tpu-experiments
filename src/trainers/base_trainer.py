@@ -354,11 +354,11 @@ class BaseTrainer:
             # if (step+1) % self.config.trainer.checkpoint_interval == 0:    
             #     self.save_checkpoint(step+1)
             
-            logger.info(f"Process {constants.PROCESS_INDEX()} starting first rendezvous for step {step}")
-            xm.rendezvous(f"end_of_step {step}")
-            logger.info(f"Process {constants.PROCESS_INDEX()} finished first rendezvous for step {step}")
+            # logger.info(f"Process {constants.PROCESS_INDEX()} starting first rendezvous for step {step}")
+            # xm.rendezvous(f"end_of_step {step}")
+            # logger.info(f"Process {constants.PROCESS_INDEX()} finished first rendezvous for step {step}")
             xm.mark_step()
-            logger.info(f"Process {constants.PROCESS_INDEX()} waiting for device ops after mark_step {step}")
+            logger.info(f"Process {constants.PROCESS_INDEX()} finished mark_step {step}")
             xm.wait_device_ops()
             logger.info(f"Process {constants.PROCESS_INDEX()} finished waiting for device ops after mark_step {step}")
             xm.rendezvous(f"after_step {step}")

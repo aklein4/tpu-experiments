@@ -46,7 +46,7 @@ def main(config: omegaconf.DictConfig):
     # set up logging
     log_level = logging.INFO
     logger.setLevel(log_level)
-    logger.addFilter(OnlyMain())
+    # logger.addFilter(OnlyMain())
     datasets.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.enable_explicit_format()

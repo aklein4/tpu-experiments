@@ -23,7 +23,7 @@ notes: testing with defailt settings
 # "Inter-Chip Interconnect".
 ici_mesh:
   data: 1
-  fsdp: 32
+  fsdp: 16
   tensor: 1
   expert: 1
   context: 1

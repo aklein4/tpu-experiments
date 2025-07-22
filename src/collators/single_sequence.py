@@ -58,7 +58,7 @@ class SingleSequenceCollator:
             dim=1
         )
 
-        logger.info(f"Collated input_ids shape: {input_ids.shape} (min={input_ids.min().item()}, max={input_ids.max().item()})", flush=True)
+        logger.info(f"Collated input_ids shape: {input_ids.shape} (min={input_ids.min().item()}, max={input_ids.max().item()})")
 
         return input_ids
 

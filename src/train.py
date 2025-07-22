@@ -70,8 +70,8 @@ def main(config: omegaconf.DictConfig):
     print("Model parameter breakdown logged.", flush=True)
 
     # Create the dataset
-    data = get_dataset(**config.dataset)
-    print(f"Dataset loaded: {config.dataset.name}", flush=True)
+    data = get_dataset(**config.data)
+    print(f"Dataset loaded: {config.data.name}", flush=True)
 
     # initialize the trainer
     trainer_cls = import_class(config.trainer.trainer_class, constants.TRAINER_MODULE)

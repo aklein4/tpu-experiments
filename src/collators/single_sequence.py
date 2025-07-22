@@ -29,12 +29,8 @@ class SingleSequenceCollator:
             out_ids = torch.tensor(x["output_ids"]).long().flatten()
 
             # print(in_ids.shape, out_ids.shape, flush=True)
-            # input_ids.append(torch.cat([in_ids, out_ids], dim=0))
+            input_ids.append(torch.cat([in_ids, out_ids], dim=0))
             # input_ids.append(in_ids)
-
-        input_ids = [
-            torch.arange(np.random.randint(10, 100), dtype=torch.long) for _ in range(bs)
-        ]
 
         # pad to length
         input_ids = torch.nn.utils.rnn.pad_sequence(

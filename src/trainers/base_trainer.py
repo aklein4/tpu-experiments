@@ -185,6 +185,7 @@ class BaseTrainer:
 
         num_replicas = xr.process_count()
         logger.info("Num replicas: %d", num_replicas)
+        logger.info(f" === CURRENT PROCESS INDEX: {xr.process_index()} === ")
 
         if self.minibatch:
             sampler = torch.utils.data.DistributedSampler(

@@ -17,3 +17,6 @@ def get_dataset(name: str, **kwargs) -> datasets.Dataset:
         datasets.Dataset: The requested dataset.
     """
     return datasets.load_dataset(name, **kwargs, token=constants.HF_TOKEN)
+
+
+class Streaming

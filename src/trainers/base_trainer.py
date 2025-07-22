@@ -231,34 +231,37 @@ class BaseTrainer:
         self,
         step: int,
     ):
-        if self.config.debug or not constants.PROCESS_IS_MAIN():
-            return
+        xm.rendezvous("before_save_checkpoint")
 
-        logger.info("[SAVING] Starting distributed checkpoint...")
+        if not self.config.debug and constants.PROCESS_IS_MAIN():
 
-        save_path = os.path.join(
-            constants.LOCAL_DATA_PATH,
-            "tmp_checkpoint",
-        )
-        self.model.export(save_path)
-        logger.info(f"Saved checkpoint to {save_path} at step {step}")
+            logger.info("[SAVING] Starting distributed checkpoint...")
 
-        api = hf.HfApi()
-        out_path = f"{step:012d}"
-            
-        api.upload_folder(
-            repo_id=self.save_repo,
-            folder_path=save_path,
-            path_in_repo=out_path,
-            repo_type="model",
-            token=os.environ['HF_TOKEN'],
-        )
-        logger.info(f"Uploaded checkpoint to {self.save_repo}/{out_path}")
+            save_path = os.path.join(
+                constants.LOCAL_DATA_PATH,
+                "tmp_checkpoint",
+            )
+            self.model.export(save_path)
+            logger.info(f"Saved checkpoint to {save_path} at step {step}")
 
-        shutil.rmtree(save_path)
+            api = hf.HfApi()
+            out_path = f"{step:012d}"
+                
+            api.upload_folder(
+                repo_id=self.save_repo,
+                folder_path=save_path,
+                path_in_repo=out_path,
+                repo_type="model",
+                token=os.environ['HF_TOKEN'],
+            )
+            logger.info(f"Uploaded checkpoint to {self.save_repo}/{out_path}")
 
-        logger.info("[SAVING] Finished distributed checkpoint.")      
+            shutil.rmtree(save_path)
 
+            logger.info("[SAVING] Finished distributed checkpoint.")      
+
+        xm.rendezvous("after_save_checkpoint")
+    
 
     def train_loop(self) -> None:
         self.model.train()
@@ -348,6 +351,7 @@ class BaseTrainer:
         
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 torch_xla.sync()
+                xm.wait_device_ops()
                 self.save_checkpoint(step)
                  
         xm.wait_device_ops()

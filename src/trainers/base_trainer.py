@@ -127,17 +127,17 @@ class BaseTrainer:
 
             # create the huggingface save repo
             self.repo_name = f"{constants.HF_ID}/{self.config.project}_{self.config.name}"
-            if constants.PROCESS_IS_MAIN():
-                hf.create_repo(
-                    self.repo_name, private=True, exist_ok=True, token=os.environ['HF_TOKEN']
-                )
 
-                # create the wandb project
-                wandb.init(
-                    project=self.config.project,
-                    name=self.config.name,
-                    notes=self.config.notes,
-                )
+            hf.create_repo(
+                self.repo_name, private=True, exist_ok=True, token=os.environ['HF_TOKEN']
+            )
+
+            # create the wandb project
+            wandb.init(
+                project=self.config.project,
+                name=self.config.name,
+                notes=self.config.notes,
+            )
 
         # Execute all initialization work queued so far before starting training.
         torch_xla.sync()
@@ -322,7 +322,7 @@ class BaseTrainer:
                 to_wandb["epoch"] = epoch
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
 
-                if not self.config.debug:
+                if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb)
 
                 if math.isnan(loss):

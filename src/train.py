@@ -37,7 +37,7 @@ def main(config: omegaconf.DictConfig):
     config_vaidator(config)
 
     # Print the config for debugging
-    if constants.PROCESS_IS_MAIN:
+    if constants.PROCESS_IS_MAIN():
         print("\n ===== Configuration ===== \n", flush=True)
         print(omegaconf.OmegaConf.to_yaml(config), flush=True)
         print("\n ========================= \n", flush=True)
@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     # only log to stdout if this is the main process
     pipe = open(os.devnull, 'w')
-    if constants.PROCESS_IS_MAIN:
+    if constants.PROCESS_IS_MAIN():
         pipe = sys.stdout
 
     # set up logging

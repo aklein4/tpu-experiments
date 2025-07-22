@@ -76,7 +76,7 @@ class BaseXLAModel(nn.Module):
     Args:
         save_directory: Directory where the model weights and configuration will be saved.
     """
-    assert constants.PROCESS_IS_MAIN, "Export should only be done by the main process!"
+    assert constants.PROCESS_IS_MAIN(), "Export should only be done by the main process!"
 
     os.makedirs(save_directory, exist_ok=True)
     state_dict = {

@@ -29,6 +29,9 @@ export PATH="/home/$USER/.local/bin:$PATH"
 # install extras
 pip install transformers datasets wandb matplotlib huggingface_hub hydra-config omegaconfig 
 
+# uninstall tensorflow if needed
+pip uninstall -y tensorflow; pip install tensorflow-cpu
+
 # login to huggingface
 huggingface-cli login --token $1 --add-to-git-credential
 

@@ -213,7 +213,7 @@ class LlamaAttention(nn.Module):
     position_embeddings: tuple[torch.Tensor, torch.Tensor],
     attention_mask: torch.Tensor | None = None,
     position_ids: torch.LongTensor | None = None,
-    segment_ids: torch.LongTensor | None = None,
+    elementwise_attention_bias: torch.Tensor | None = None,
   ) -> torch.FloatTensor:
     bsz, q_len, _ = hidden_states.size()
 
@@ -235,12 +235,20 @@ class LlamaAttention(nn.Module):
     cos, sin = position_embeddings
     query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
-    if segment_ids is not None:
-      # long rounds down
-      segment_ids = (segment_ids.round() + 0.25).long()
+    # apply elementwise attention bias
+    first_ind = (query_states.shape[-1] //2 ) - 1
+    sec_ind = -1
+
+    query_states = query_states.clone()
+    query_states[..., first_ind] = 0.5
+    query_states[..., sec_ind] = 0.5
+
+    key_states = key_states.clone()
+    key_states[..., first_ind] = elementwise_attention_bias[:, None] # add head axis 
+    key_states[..., sec_ind] = elementwise_attention_bias[:, None]
 
     attn_output = self.attention_block(
-      query_states, key_states, value_states, attention_mask, segment_ids=segment_ids
+      query_states, key_states, value_states, attention_mask
     )
     attn_output = attn_output.transpose(1, 2).contiguous()
     attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
@@ -268,7 +276,7 @@ class LlamaDecoderLayer(nn.Module):
     attention_mask: torch.Tensor | None = None,
     position_ids: torch.Tensor | None = None,
     position_embeddings: tuple[torch.Tensor, torch.Tensor] | None = None,  # necessary, but kept here for BC
-    segment_ids: torch.LongTensor | None = None,
+    elementwise_attention_bias: torch.Tensor | None = None,
   ) -> torch.Tensor:
     """
     Args:
@@ -293,7 +301,7 @@ class LlamaDecoderLayer(nn.Module):
       attention_mask=attention_mask,
       position_ids=position_ids,
       position_embeddings=position_embeddings,
-      segment_ids=segment_ids,
+      elementwise_attention_bias=elementwise_attention_bias,
     )
     hidden_states = residual + hidden_states
 
@@ -345,7 +353,7 @@ class LlamaModel(nn.Module):
     input_ids: torch.LongTensor,
     attention_mask: torch.FloatTensor | None = None,
     position_ids: torch.LongTensor | None = None,
-    segment_ids: torch.LongTensor | None = None,
+    elementwise_attention_bias: torch.LongTensor | None = None,
   ) -> torch.Tensor:
     # convert input ids to embeddings
     inputs_embeds = self.embed_tokens(input_ids)
@@ -358,8 +366,8 @@ class LlamaModel(nn.Module):
       position_ids = (
         torch.arange(seq_length, device=inputs_embeds.device).unsqueeze(0).float()
       )
-    if segment_ids is None:
-      segment_ids = torch.zeros_like(position_ids)
+    if elementwise_attention_bias is None:
+      elementwise_attention_bias = torch.zeros_like(position_ids)
 
     # Create a causal attention mask
     causal_mask = torch.triu(
@@ -382,7 +390,7 @@ class LlamaModel(nn.Module):
       attention_mask=causal_mask,
       position_ids=position_ids,
       position_embeddings=position_embeddings,
-      segment_ids=segment_ids,
+      elementwise_attention_bias=elementwise_attention_bias,
     )
 
     hidden_states = self.norm(hidden_states)

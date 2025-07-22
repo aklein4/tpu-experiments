@@ -223,7 +223,7 @@ class BaseTrainer:
             collate_fn=collator,
             batch_size=batch_size,
             # sampler=sampler,
-            shuffle=False
+            shuffle=False,
             drop_last=True,
         )
         loader = pl.MpDeviceLoader(

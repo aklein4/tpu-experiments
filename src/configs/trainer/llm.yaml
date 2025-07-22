@@ -3,10 +3,10 @@ trainer_class: llm_trainer.LLMTrainer  # Used to import the trainer from this cl
 
 # This is for basic training loop, i.e., forward/backward pass without any special task logic.
 global_batch_size: 512
-max_steps: 1000
+max_steps: 15
 
 # checkpointing configuration
-checkpoint_interval: 100  # Save a checkpoint every N steps
+checkpoint_interval: 10  # Save a checkpoint every N steps
 # convert_to_safetensors: true  # Convert the model to safetensors format when saving
 
 # Optimizer configuration.

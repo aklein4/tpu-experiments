@@ -326,6 +326,7 @@ def convert_to_safetensors_on_cpu(model: torch.nn.Module, save_dir: Path) -> Non
     }
   }
 
+  logger.info("Materializing checkpoint on CPU …")
   dist_cp.load(
     state_dict=reload_sd,
     storage_reader=dist_cp.FileSystemReader(str(save_dir)),

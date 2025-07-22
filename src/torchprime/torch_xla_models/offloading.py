@@ -8,7 +8,7 @@ from torch.utils._pytree import tree_iter
 from torch.utils.checkpoint import CheckpointPolicy
 from torch_xla.experimental.stablehlo_custom_call import place_to_device, place_to_host
 
-from torchprime.remat_all import remat_all_partition_fn
+from .remat_all import remat_all_partition_fn
 
 
 @torch.library.custom_op("xla::offload_name", mutates_args=())

@@ -207,7 +207,7 @@ def extract_model_size_from_model_name(model_name: str) -> int | float:
   return -1
 
 
-def log_parameter_breakdown(model: torch.nn.Module, logger: logging.Logger) -> None:
+def log_parameter_breakdown(model: torch.nn.Module, logger: logging.Logger, simple=False) -> None:
   """Logs the number of parameters in different components of the model.
 
   Args:
@@ -216,6 +216,8 @@ def log_parameter_breakdown(model: torch.nn.Module, logger: logging.Logger) -> N
   """
   total_params = sum(p.numel() for p in model.parameters())
   logger.info("Model total size: {} parameters".format(f"{total_params:,}"))
+  if simple:
+    return
 
   param_groups = {
     "mlp": 0,

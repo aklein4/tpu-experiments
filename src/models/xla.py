@@ -5,7 +5,10 @@ It includes a standard weight initialization method, a placeholder forward pass,
 and methods for saving and loading model checkpoints using the `safetensors` format.
 """
 
+from __future__ import annotations
+
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -17,12 +20,13 @@ import torch_xla.core.xla_model as xm
 import torch_xla.runtime as xr
 from omegaconf import DictConfig, OmegaConf
 
-from torchprime import model_utils
-from utils import constants
+from torchprime.torch_xla_models.model import model_utils
+
+logger = logging.getLogger(__name__)
 
 
 class BaseXLAModel(nn.Module):
-  """Base class for XLA models.
+  """Base class for xla models.
 
   This class provides a template for building causal language models using PyTorch.
   It includes methods for weight initialization, saving, and loading model checkpoints.
@@ -53,6 +57,10 @@ class BaseXLAModel(nn.Module):
       module.weight.data.normal_(mean=0.0, std=std)
 
 
+  def forward(self):
+    raise NotImplementedError("Subclasses must implement forward")
+
+
   def export(self, save_directory: str):
     """Export model weights and config to a directory in sharded safetensors format.
 
@@ -67,17 +75,15 @@ class BaseXLAModel(nn.Module):
     Args:
         save_directory: Directory where the model weights and configuration will be saved.
     """
-    if constants.XLA_MAIN():
+    os.makedirs(save_directory, exist_ok=True)
+    state_dict = {
+      k: v.cpu() if str(v.device).startswith("xla") else v
+      for k, v in self.state_dict().items()
+    }
+    model_utils.save_sharded_safetensors_by_layer(state_dict, save_directory)
 
-        os.makedirs(save_directory, exist_ok=True)
-        state_dict = {
-            k: v.cpu() if str(v.device).startswith("xla") else v
-            for k, v in self.state_dict().items()
-        }
-        model_utils.save_sharded_safetensors_by_layer(state_dict, save_directory)
-
-        with open(os.path.join(save_directory, "config.json"), "w") as f:
-            json.dump(OmegaConf.to_container(self.config, resolve=True), f, indent=4)
+    with open(os.path.join(save_directory, "config.json"), "w") as f:
+      json.dump(OmegaConf.to_container(self.config, resolve=True), f, indent=2)
 
 
   def from_pretrained(self, model_path_or_repo: str):
@@ -106,7 +112,7 @@ class BaseXLAModel(nn.Module):
     self.load_state_dict(state_dict)
 
 
-  def _maybe_save_checkpoint(self, config: DictConfig) -> None:
+  def _maybe_save_checkpoint(self, save_dir, convert_to_safetensors=False) -> None:
     """Save a sharded checkpoint and optionally convert it to safetensors format.
 
     This method performs the following steps:
@@ -119,23 +125,25 @@ class BaseXLAModel(nn.Module):
         reload the checkpoint on CPU and export sharded safetensors + index.
       7. Synchronize all processes using an XLA rendezvous barrier.
     """
-    # Step 1: Check export path
-    folder_name = getattr(config.task, "export_checkpoint_path", None)
-    if folder_name is None:
-      logger.info("Skipping model export, no export_checkpoint_path provided.")
-      return
+    save_dir = Path(save_dir)
+
+    # # Step 1: Check export path
+    # folder_name = getattr(config.task, "export_checkpoint_path", None)
+    # if folder_name is None:
+    #   logger.info("Skipping model export, no export_checkpoint_path provided.")
+    #   return
 
     # Step 2: Prepare save directory and flush device ops
-    save_dir = Path(config.output_dir) / folder_name
+    # save_dir = Path(config.output_dir) / folder_name
     save_dir.mkdir(parents=True, exist_ok=True)
     xm.mark_step()
     xm.wait_device_ops()
 
     # Step 3: Save the HF config files and tokenizer
-    if xr.process_index() == 0:
-      logger.info("Saving Hugging Face configs and tokenizer to %s", save_dir)
-      model_utils.copy_hf_config_files(config.model.pretrained_model, save_dir)
-      model_utils.save_hf_tokenizer(config.model.pretrained_model, save_dir)
+    # if xr.process_index() == 0:
+    #   logger.info("Saving Hugging Face configs and tokenizer to %s", save_dir)
+    #   model_utils.copy_hf_config_files(config.model.pretrained_model, save_dir)
+    #   model_utils.save_hf_tokenizer(config.model.pretrained_model, save_dir)
 
     # Step 4: Initialize torch.distributed process group
     if not dist.is_initialized():
@@ -148,7 +156,7 @@ class BaseXLAModel(nn.Module):
 
     # Step 6: Convert to safetensors on rank-0 if enabled
     if (
-      getattr(config.task, "convert_to_safetensors", False) and xr.process_index() == 0
+      convert_to_safetensors and xr.process_index() == 0
     ):
       logger.info("Converting distributed checkpoint to safetensors")
       model_utils.convert_to_safetensors_on_cpu(self, save_dir)

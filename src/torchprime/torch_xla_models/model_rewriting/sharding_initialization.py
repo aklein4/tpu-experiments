@@ -6,15 +6,17 @@ and applying weight/activation sharding annotations to the model. It ensures mod
 (OmegaConf) to control sharding behavior.
 """
 
+import logging
+
 import torch.nn as nn
 import torch_xla.distributed.spmd as xs
 from omegaconf import DictConfig, OmegaConf
-from torch_xla.distributed.spmd.xla_sharding import apply_xla_patch_to_nn_linear
 
 from torchprime.sharding.shard_model import shard_torch_xla_model_from_config
-from torchprime.topology import get_mesh, is_1d_sharding
+from torchprime.torch_xla_models.topology import get_mesh, is_1d_sharding
+from torchprime.utils.parallelism_utils import cp_enabled
 
-from utils.logging_utils import log_master_print
+logger = logging.getLogger(__name__)
 
 
 def setup_sharding_and_mesh(
@@ -41,22 +43,22 @@ def setup_sharding_and_mesh(
   """
   mesh = get_mesh(config)
   xs.set_global_mesh(mesh)
-  log_master_print(f"Logical mesh shape: {mesh.shape()}")
-  log_master_print(f"Logical mesh device assignments: {mesh.device_ids}")
+  logger.info("Logical mesh shape: %s", mesh.shape())
+  logger.info("Logical mesh device assignments: %s", mesh.device_ids)
 
   # TODO(https://github.com/pytorch/xla/issues/8696): Minibatch only works in 1D sharding.
   minibatch = is_1d_sharding(tuple(config.ici_mesh.values()))
-  log_master_print(f"Minibatch dataloading: {minibatch}")
+  logger.info("Minibatch dataloading: %s", minibatch)
 
   # TODO(https://github.com/AI-Hypercomputer/torchprime/issues/66): Test this for multislice
-  input_sharding_spec = xs.ShardingSpec(
-    mesh, (("data", "fsdp"), None), minibatch=minibatch
-  )
-
-  # Recursively replace `nn.Linear` layers with einsum operations in the model.
-  # Without this patch, an `nn.Linear` module will flatten non-contracting dimensions
-  # (e.g. batch and sequence), thus destroying the sharding constraints on those dimensions.
-  model = apply_xla_patch_to_nn_linear(model)
+  if cp_enabled(config):
+    input_sharding_spec = xs.ShardingSpec(
+      mesh, (("data", "fsdp"), "context"), minibatch=minibatch
+    )
+  else:
+    input_sharding_spec = xs.ShardingSpec(
+      mesh, (("data", "fsdp"), None), minibatch=minibatch
+    )
 
   # Annotate model weights and activations with sharding constraints to distribute
   # the training across devices following the SPMD paradigm.

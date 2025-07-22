@@ -39,11 +39,10 @@ LOCAL_DATA_PATH = os.path.join(BASE_PATH, "local_data")
 # paths to config files
 CONFIG_PATH = os.path.join(BASE_PATH, "configs")
 
-# module for classes
+# modules for classes
 MODEL_MODULE = "models"
-
-# module for trainers
 TRAINER_MODULE = "trainers"
+COLLATOR_MODULE = "collators"
 
 # huggingface login id
 HF_ID = "aklein4"

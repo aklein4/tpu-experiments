@@ -9,6 +9,7 @@ specifically for use with PyTorch/XLA and SPMD sharding. It includes logic to:
 - Apply backward optimization barriers to mitigate recompute overhead.
 """
 
+import logging
 from functools import partial
 
 import torch.nn as nn
@@ -19,9 +20,9 @@ from transformers.trainer_pt_utils import get_module_class_from_name
 
 from torchprime.layers.sequential import HomogeneousSequential
 from torchprime.sharding.shard_model import wrap_module
-from torchprime import offloading, remat_all, scan_layers
+from torchprime.torch_xla_models import offloading, remat_all, scan_layers
 
-from utils.logging_utils import log_master_print
+logger = logging.getLogger(__name__)
 
 
 def add_activation_checkpointing_and_scan(
@@ -50,7 +51,7 @@ def add_activation_checkpointing_and_scan(
     NotImplementedError: If checkpointed layer does not match scanned layer.
   """
   remat_config = config.model.remat
-  remat_classes = _get_classes_by_names(
+  remat_classes = get_classes_by_names(
     model, remat_config.get("activation_checkpoint_layers", [])
   )
   layers_to_scan = remat_config.get("scan_layers", None)
@@ -58,11 +59,11 @@ def add_activation_checkpointing_and_scan(
 
   # Checking preconditions and logging.
   if remat_classes:
-    log_master_print(f"Enabling activation checkpointing on {remat_classes}")
+    logger.info("Enabling activation checkpointing on %s", remat_classes)
   if layers_to_scan:
-    log_master_print(f"Compiling module `{layers_to_scan}` with scan")
+    logger.info("Compiling module `%s` with scan", layers_to_scan)
   if offload_tensors:
-    log_master_print(f"Will offload tensors to host RAM: {offload_tensors}")
+    logger.info("Will offload tensors to host RAM: %s", offload_tensors)
     if layers_to_scan is None:
       raise NotImplementedError("Host offloading requires scan")
     if len(remat_classes) != 1:
@@ -111,13 +112,13 @@ def add_optimization_barriers(model: nn.Module, config: DictConfig) -> nn.Module
     Modified model with optimization barriers.
   """
   remat_config = config.model.remat
-  classes = _get_classes_by_names(
+  classes = get_classes_by_names(
     model, remat_config.get("optimization_barrier_layers", [])
   )
   if not classes:
     return model
 
-  log_master_print(f"Adding backward optimization barriers to {classes}")
+  logger.info("Adding backward optimization barriers to %s", classes)
 
   def maybe_add_barrier(mod: nn.Module, _name: str) -> nn.Module:
     if isinstance(mod, tuple(classes)):
@@ -127,7 +128,7 @@ def add_optimization_barriers(model: nn.Module, config: DictConfig) -> nn.Module
   return wrap_module(model, maybe_add_barrier)
 
 
-def _get_classes_by_names(
+def get_classes_by_names(
   model: nn.Module, class_names: list[str]
 ) -> tuple[type[nn.Module], ...]:
   """Helper to resolve string class names to actual model classes.

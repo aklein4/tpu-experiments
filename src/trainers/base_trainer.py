@@ -13,12 +13,12 @@ Typical usage example:
 import logging
 import math
 import os
+from datetime import datetime
 from pathlib import Path
 from timeit import default_timer as timer
 
-import wandb
-
 import torch
+import torch.nn.utils as nn_utils
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.debug.profiler as xp
@@ -27,21 +27,36 @@ import torch_xla.runtime as xr
 from omegaconf import DictConfig, OmegaConf
 from torch import nn
 from torch.utils.data import DataLoader, Dataset, IterableDataset
+from torch.utils.tensorboard import SummaryWriter
+from torch_xla.distributed.spmd.xla_sharding import apply_xla_patch_to_nn_linear
 from transformers import (
     default_data_collator,
     get_scheduler,
 )
 from transformers.optimization import Adafactor
 
-from torchprime.model_rewriting.rematerialization_utils import (
+from torchprime.metrics.mfu import compute_mfu
+from torchprime.metrics.step_duration import step_duration_from_latest_profile
+from torchprime.torch_xla_models.model_rewriting.assume_pure import (
+    mark_pure_modules,
+)
+from torchprime.torch_xla_models.model_rewriting.auto_trace import auto_trace
+from torchprime.torch_xla_models.model_rewriting.rematerialization_utils import (
     add_activation_checkpointing_and_scan,
     add_optimization_barriers,
 )
-from torchprime.model_rewriting.sharding_initialization import (
+from torchprime.torch_xla_models.model_rewriting.sharding_initialization import (
     setup_sharding_and_mesh,
 )
-from torchprime.topology import get_num_slices
+from torchprime.torch_xla_models.topology import get_num_slices
+from torchprime.utils.parallelism_utils import lb_cp_enabled, reorder_sequence
+from torchprime.utils.profiling import ensure_profile_end_step
 
+import wandb
+import huggingface_hub as hf
+
+from models.xla import BaseXLAModel
+from utils.import_utils import import_class
 from utils import constants
 
 logger = logging.getLogger(__name__)
@@ -52,6 +67,10 @@ def get_model_dtype(module: nn.Module) -> torch.dtype:
     if len(dtypes) != 1:
         raise ValueError(f"Inconsistent dtypes found: {dtypes}")
     return dtypes.pop()
+
+
+_ADAFACTOR = "adafactor"
+_ADAMW = "adamw"
 
 
 class BaseTrainer:
@@ -67,59 +86,103 @@ class BaseTrainer:
         train_dataset: Dataset used for training.
     """
 
+    minibatch: bool
+
     def __init__(
         self,
-        model: nn.Module,
+        model: BaseXLAModel,
         config: DictConfig,
         train_dataset: Dataset | IterableDataset | None,
     ):
         self.config = config
         self.device = xm.xla_device()
-        self.global_batch_size = self.config.global_batch_size
+        self.global_batch_size = self.config.task.global_batch_size
         self.train_dataset = train_dataset
 
-        # Set up sharding
+        # -- Model transformations --
+        # Recursively replace `nn.Linear` layers with einsum operations in the model.
+        # Without this patch, an `nn.Linear` module will flatten non-contracting dimensions
+        # (e.g. batch and sequence), thus destroying the sharding constraints on those dimensions.
+        model = apply_xla_patch_to_nn_linear(model)
+
+        # Add `xp.Trace` to linear layers in the module tree (just for profiling?).
+        model = auto_trace(model)
+
+        # Setup SPMD mesh and shard the model.
         model, self.input_sharding_spec, self.minibatch = setup_sharding_and_mesh(
             model, config
         )
-
-        # Set up model
+        model = mark_pure_modules(model, config)
         model = add_activation_checkpointing_and_scan(model, config)
         model = add_optimization_barriers(model, config)
         self.model = model
 
-        # Set up optimizer
-        assert self.config.optimizer.type == "adafactor", (
-            "Currently only Adafactor optimizer is supported"
-        )
-        self.optimizer = Adafactor(
-            params=model.parameters(),
-            lr=self.config.optimizer.learning_rate,
-            relative_step=False,
-            scale_parameter=False,
-        )
-
-        # TODO: this OOMs the TPU.
-        # self._prime_optimizer()
-
+        # create optimizer and learning rate scheduler
+        self.optimizer = self._create_optimizer(config, model.parameters())
         self.lr_scheduler = get_scheduler(
-            name=self.config.lr_scheduler.type,
+            name=self.config.task.lr_scheduler.type,
             optimizer=self.optimizer,
-            num_warmup_steps=self.config.lr_scheduler.warmup_steps,
-            num_training_steps=self.config.max_steps,
+            num_warmup_steps=self.config.task.lr_scheduler.warmup_steps,
+            num_training_steps=self.config.task.max_steps,
         )
+
+        # create the local data path
+        if not self.config.debug:
+            os.makedirs(constants.LOCAL_DATA_PATH, exist_ok=True)
+
+            # create the huggingface save repo
+            self.repo_name = f"{constants.HF_ID}/{self.config.wandb.project}_{self.config.wandb.name}"
+            hf.create_repo(
+                self.repo_name, private=True, exist_ok=True
+            )
+
+            # create the wandb project
+            wandb.init(
+                project=self.config.wandb.project,
+                name=self.config.wandb.name,
+                notes=self.config.wandb.notes,
+            )
 
         # Execute all initialization work queued so far before starting training.
         torch_xla.sync()
 
 
-    # def _prime_optimizer(self) -> None:
-    #     for group in self.optimizer.param_groups:
-    #         for p in group["params"]:
-    #             p.grad = torch.zeros_like(p)
-    #             p.grad.requires_grad_(False)
-    #     self.optimizer.step()
-    #     torch_xla.sync()
+    @staticmethod
+    def _create_optimizer(config, model_parameters) -> torch.optim.Optimizer:
+        """Helper for optimizer initialization."""
+        if config.task.optimizer.type not in (_ADAFACTOR, _ADAMW):
+            raise ValueError(
+                f"Supported optimizers are {[_ADAFACTOR, _ADAMW]}, "
+                f"but got {config.task.optimizer.type}"
+            )
+
+        if config.task.optimizer.type == _ADAMW:
+            optimizer = torch.optim.AdamW(
+                params=model_parameters,
+                lr=config.task.optimizer.learning_rate,
+                weight_decay=config.task.optimizer.weight_decay,
+                betas=(
+                    config.task.optimizer.beta1,
+                    config.task.optimizer.beta2,
+                ),
+            )
+
+        elif config.task.optimizer.type == _ADAFACTOR:
+            # Adafactor optimizer does not support weight decay.
+            if "weight_decay" in config.task.optimizer:
+                raise ValueError("Adafactor does not support weight decay.")
+
+            optimizer = Adafactor(
+                params=model_parameters,
+                lr=config.task.optimizer.learning_rate,
+                relative_step=False,
+                scale_parameter=False,
+            )
+
+        else:
+            raise AssertionError(f"Invalid optimizer type: {config.task.optimizer.type}")
+
+        return optimizer
 
 
     def _get_train_dataloader(self) -> pl.MpDeviceLoader:
@@ -151,10 +214,14 @@ class BaseTrainer:
             # Each process will load the global batch, then discard the unneeded parts.
             batch_size = self.global_batch_size
 
+        # handle the collator
+        collator_cls = import_class(self.config.data.collator.collator_class, constants.COLLATOR_MODULE)
+        collator = collator_cls(**self.config.data.collator)
+
         dataloader = DataLoader(
             self.train_dataset,
             # Data collator will default to DataCollatorWithPadding, so we change it.
-            collate_fn=default_data_collator,
+            collate_fn=collator,
             batch_size=batch_size,
             sampler=sampler,
             drop_last=True,
@@ -163,15 +230,45 @@ class BaseTrainer:
             dataloader, self.device, input_sharding=self.input_sharding_spec
         )
         return loader
+    
+
+    def save_checkpoint(
+        self,
+        step: int,
+    ):
+        if self.config.debug:
+            return
+
+        save_path = os.path.join(
+            constants.LOCAL_DATA_PATH,
+            "tmp_checkpoint",
+        )
+        self.model._maybe_save_checkpoint(
+            save_path,
+            convert_to_safetensors=self.config.task.convert_to_safetensors,
+        )
+
+        api = hf.HfApi()
+        out_path = f"{step:012d}"
+            
+        api.upload_folder(
+            repo_id=self.save_repo,
+            folder_path=save_path,
+            path_in_repo=out_path,
+            repo_type="model"
+        )
+
+        os.removedirs(save_path)
 
 
-    def train_loop(self, metrics_logger) -> None:
+    def train_loop(self) -> None:
         self.model.train()
         self.model.zero_grad()
 
         # For now we assume that we will never train for more than one epoch
-        max_step = self.config.max_steps
+        max_step = self.config.task.max_steps
         train_loader = self._get_train_dataloader()
+        steps_per_epoch = len(train_loader)
         train_iterator = iter(train_loader)
 
         logger.info("Starting training")
@@ -188,87 +285,107 @@ class BaseTrainer:
                 train_iterator = iter(train_loader)
                 batch = next(train_iterator)
 
+            # when context parallel and load balance context parallel is enabled,
+            # we will reorder the sequence here for each batch
+            if lb_cp_enabled(self.config):
+                return {
+                    key: reorder_sequence(
+                        tensor=value,
+                        cp_size=self.config.ici_mesh.context,
+                        seq_dim=1,
+                        to_contiguous=False,
+                    )
+                    for key, value in batch.items()
+                }
+
             trace_start_time = timer()
-            loss = self.train_step(batch)
+            loss, aux = self.train_step(batch)
             trace_end_time = timer()
 
-            if step % self.config.logging_steps == 0:
+            def step_closure(
+                epoch, step, loss, aux, trace_start_time, trace_end_time, lr
+            ):
+                loss = loss.detach().item()
 
-                def step_closure(epoch, step, loss, trace_start_time, trace_end_time):
-                    loss = loss.detach().item()
-                    logger.info(
-                        "Epoch: %d, step: %d, loss: %.4f, trace time: %.2f ms",
-                        epoch,
-                        step,
-                        loss,
-                        (trace_end_time - trace_start_time) * 1000,
-                    )
-                    if math.isnan(loss):
-                        raise ValueError(f"Loss is NaN at step {step}")
-
-                xm.add_step_closure(
-                    step_closure,
-                    args=(epoch, step, loss, trace_start_time, trace_end_time),
-                    run_async=True,
+                logger.info(
+                    "Epoch: %.4f, step: %d, loss: %.4f, lr: %.2e, trace time: %.2f ms",
+                    step / steps_per_epoch,
+                    step,
+                    loss,
+                    lr,
+                    (trace_end_time - trace_start_time) * 1000,
                 )
 
-            # Capture profile at the prefer step
-            if step == self.config.profile_step:
-                # Wait until device execution catches up to tracing before triggering the profile. This will
-                # interrupt training slightly on the hosts which are capturing, but by waiting after tracing
-                # for the step, the interruption will be minimal.
-                xm.wait_device_ops()
-                xp.trace_detached(
-                    "127.0.0.1:9012",
-                    self.config.profile_dir,
-                    self.config.profile_duration,
-                )
+                to_wandb = {}
+                for k, v in aux.items():
+                    if isinstance(v, torch.Tensor):
+                        to_wandb[k] = v.detach().item()
+                    else:
+                        to_wandb[k] = v
+                to_wandb["loss"] = loss
+                to_wandb["lr"] = lr
+                to_wandb["epoch"] = epoch
+                to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
+
+                if not self.config.debug:
+                    wandb.log(to_wandb)
+
+                if math.isnan(loss):
+                    raise ValueError(f"Loss is NaN at step {step}")
+
+            xm.add_step_closure(
+                step_closure,
+                args=(
+                    epoch,
+                    step,
+                    loss,
+                    aux,
+                    trace_start_time,
+                    trace_end_time,
+                    self.lr_scheduler.get_last_lr()[0],
+                ),
+                run_async=True,
+            )
+        
+        if step % self.config.task.checkpoint_interval == 0:    
+            logger.info("[SAVING] Starting distributed checkpoint …")
+            self.model._maybe_save_checkpoint(self.config)
+            logger.info("[SAVING] Finished distributed checkpoint")       
 
         xm.wait_device_ops()
         logger.info("Finished training run")
 
-        if self.config.profile_step >= 0:
-            # Analyze the step duration from the latest profile
-            step_duration = step_duration_from_latest_profile(self.config.profile_dir)
-            metrics_logger.log_step_execution_time(step_duration)
-
-            tpu_name = os.environ.get("TORCHPRIME_TPU_TYPE", None)
-            if tpu_name:
-                # Compute MFU
-                mfu = compute_mfu(
-                    config=self.config.model,
-                    batch_size=self.config.global_batch_size,
-                    step_duration=step_duration,
-                    tpu_name=tpu_name,
-                    num_slices=get_num_slices(),
-                    sequence_length=self.config.block_size,
-                    torch_dtype=self.config.torch_dtype,
-                )
-                metrics_logger.log_mfu(mfu.mfu)
-
-                # Compute tokens per seconds
-                tokens_per_second = (
-                    self.config.block_size * self.config.global_batch_size // step_duration
-                )
-                metrics_logger.log_tokens_per_second(tokens_per_second)
-
-                # Log number of steps
-                metrics_logger.log_num_steps(self.config.max_steps)
-
-        # Print and save metrics
-        metrics = metrics_logger.finalize()
-        logger.info("***** train metrics *****\n%s", metrics)
-        metrics.save(Path(self.config.output_dir) / "train_metrics.json")
-
-        # Save the hydra config
-        config_save_path = Path(self.config.output_dir) / "train_config.json"
-        OmegaConf.save(config=self.config, f=config_save_path)
 
     @torch_xla.compile(full_graph=True)
-    def train_step(self, batch: dict) -> torch.Tensor:
-        _logits, loss = self.model(**batch)
+    def train_step(self, batch: dict) -> tuple[torch.Tensor, torch.Tensor]:
+        loss, aux = self.forward(**batch)
+        
         loss.backward()
+        
+        self.clip_gradients()
         self.optimizer.step()
         self.lr_scheduler.step()
         self.model.zero_grad()
+
         return loss
+
+
+    def forward(self, batch: dict):
+        raise NotImplementedError(
+            "The forward method should be implemented in the derived class."
+        )
+
+
+    def clip_gradients(self):
+        """Clip gradients by the specified max norm and/or max absolute value."""
+        max_grad_norm = self.config.task.max_grad_norm
+        if max_grad_norm is None or max_grad_norm <= 0:
+            grad_norm = nn_utils.get_total_norm(self.model.parameters(), norm_type=2)
+        else:
+            grad_norm = nn_utils.clip_grad_norm_(
+                self.model.parameters(), max_norm=max_grad_norm, norm_type=2
+            )
+        max_grad_value = self.config.task.max_grad_value
+        if max_grad_value is not None and max_grad_value > 0:
+            nn_utils.clip_grad_value_(self.model.parameters(), clip_value=max_grad_value)
+        return grad_norm

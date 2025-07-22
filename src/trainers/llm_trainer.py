@@ -5,8 +5,8 @@ from trainers.base_trainer import BaseTrainer
 
 class LLMTrainer(BaseTrainer):
 
-    def forward(self, batch):
+    def forward(self, input_ids, mask):
 
-        _logits, loss = self.model(input_ids=batch["input_ids"])
+        _logits, loss = self.model(input_ids=input_ids)
 
         return loss, {}

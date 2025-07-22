@@ -357,7 +357,7 @@ class BaseTrainer:
         
         loss.backward()
         
-        self.clip_gradients()
+        # self.clip_gradients()
         self.optimizer.step()
         self.lr_scheduler.step()
         self.model.zero_grad()

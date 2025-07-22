@@ -1,5 +1,5 @@
 
-name: aklein4/mixed-pretraining-tokenized
+name: aklein4/mixed-pretraining-tokenized-mini
 split: train
 
 streaming: false

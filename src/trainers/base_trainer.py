@@ -241,12 +241,13 @@ class BaseTrainer:
         self.model._maybe_save_checkpoint(save_path)
         logger.info(f"Saved checkpoint to {save_path} at step {step}")
 
-        api = hf.HfApi()
-        out_path = f"{step:012d}"
-
         if constants.PROCESS_IS_MAIN(): 
+
+            api = hf.HfApi()
+            out_path = f"{step:012d}"
+
             api.upload_folder(
-                repo_id=self.save_repo,
+                repo_id=self.repo_name,
                 folder_path=save_path,
                 path_in_repo=out_path,
                 repo_type="model",

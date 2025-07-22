@@ -238,7 +238,7 @@ class BaseTrainer:
             "tmp_checkpoint",
         )
 
-        self.model._maybe_save_checkpoint(save_path, convert_to_safetensors=True)
+        self.model._maybe_save_checkpoint(save_path, convert_to_safetensors=False)
         logger.info(f"Saved checkpoint to {save_path} at step {step}")
 
         if constants.PROCESS_IS_MAIN(): 

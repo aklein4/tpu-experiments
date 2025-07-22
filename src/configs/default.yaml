@@ -15,7 +15,7 @@ torch_dtype: bfloat16
 # logging and saving configuration
 debug: false
 project: prime-testing
-name: test-checkpointing
+name: test-checkpointing-2
 notes: testing with default settings
 
 # The virtual device mesh shape to use within a TPU slice. This is also called

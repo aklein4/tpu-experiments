@@ -235,6 +235,10 @@ class LlamaAttention(nn.Module):
     cos, sin = position_embeddings
     query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
+    if segment_ids is not None:
+      # long rounds down
+      segment_ids = (segment_ids.round() + 0.25).long()
+
     attn_output = self.attention_block(
       query_states, key_states, value_states, attention_mask, segment_ids=segment_ids
     )
@@ -354,6 +358,8 @@ class LlamaModel(nn.Module):
       position_ids = (
         torch.arange(seq_length, device=inputs_embeds.device).unsqueeze(0).float()
       )
+    if segment_ids is None:
+      segment_ids = torch.zeros_like(position_ids)
 
     # Create a causal attention mask
     causal_mask = torch.triu(

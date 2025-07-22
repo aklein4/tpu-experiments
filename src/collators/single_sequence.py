@@ -4,6 +4,12 @@ import torch.nn.functional as F
 
 import numpy as np
 
+from transformers import logging
+
+from utils import constants
+
+logger = logging.get_logger()
+
 
 class SingleSequenceCollator:
 
@@ -51,6 +57,8 @@ class SingleSequenceCollator:
             ],
             dim=1
         )
+
+        logger.info(f"Collated input_ids shape: {input_ids.shape} (min={input_ids.min().item()}, max={input_ids.max().item()})", flush=True)
 
         return input_ids
 

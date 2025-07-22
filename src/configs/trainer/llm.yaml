@@ -2,7 +2,7 @@
 trainer_class: llm_trainer.LLMTrainer  # Used to import the trainer from this class
 
 # This is for basic training loop, i.e., forward/backward pass without any special task logic.
-global_batch_size: 512
+global_batch_size: 32
 max_steps: 15
 
 # checkpointing configuration

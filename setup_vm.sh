@@ -32,7 +32,6 @@ pip install transformers datasets matplotlib huggingface_hub wandb hydra-core om
 
 # login to huggingface
 # huggingface-cli login --token $1 --add-to-git-credential
-export HF_TOKEN=$1
 
 # login to wandb
 python -m wandb login $2

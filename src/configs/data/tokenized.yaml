@@ -3,7 +3,7 @@ dataset:
     name: aklein4/mixed-pretraining-tokenized-mini
     split: train
 
-    streaming: false
+    streaming: true
 
 collator_class: single_sequence.SingleSequenceCollator
 collator_kwargs:

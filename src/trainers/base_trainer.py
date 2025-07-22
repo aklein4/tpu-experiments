@@ -241,7 +241,7 @@ class BaseTrainer:
         self.model._maybe_save_checkpoint(save_path, convert_to_safetensors=True)
         logger.info(f"Saved checkpoint to {save_path} at step {step}")
 
-        if constants.PROCESS_INDEX() == 0: 
+        if constants.PROCESS_IS_MAIN(): 
 
             api = hf.HfApi()
             out_path = f"{step:012d}"

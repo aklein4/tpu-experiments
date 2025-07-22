@@ -331,7 +331,7 @@ def convert_to_safetensors_on_cpu(model: torch.nn.Module, save_dir: Path) -> Non
     state_dict=reload_sd,
     storage_reader=dist_cp.FileSystemReader(str(save_dir)),
     planner=xc.SPMDLoadPlanner(),
-    no_dist=True,
+    # no_dist=True,
   )
   logger.info("Checkpoint fully materialised on CPU")
 

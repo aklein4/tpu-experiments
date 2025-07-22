@@ -1,0 +1,35 @@
+
+trainer_class: llm.LLMTrainer  # Used to import the trainer from this class
+
+# This is for basic training loop, i.e., forward/backward pass without any special task logic.
+global_batch_size: 32
+max_steps: 1000000
+
+# checkpointing configuration
+checkpoint_interval: 1000  # Save a checkpoint every N steps
+convert_to_safetensors: true  # Convert the model to safetensors format when saving
+
+# Optimizer configuration.
+optimizer:
+  type: adamw
+
+  learning_rate: 5.e-5
+  weight_decay: 0.01
+
+  beta1: 0.9
+  beta2: 0.95
+
+
+# Learning rate scheduler configuration.
+lr_scheduler:
+  type: linear
+
+  warmup_steps: 100
+  
+
+# Defaults to clip the L2 norm of gradients to 1.0.
+# Set to null to disable gradient clipping by norm.
+max_grad_norm: 1.0
+# Defaults to not clip gradients by their absolute value.
+# Set to a number to clip gradients by the specified max absolute value.
+max_grad_value: null

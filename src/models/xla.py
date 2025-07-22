@@ -83,7 +83,7 @@ class BaseXLAModel(nn.Module):
     model_utils.save_sharded_safetensors_by_layer(state_dict, save_directory)
 
     with open(os.path.join(save_directory, "config.json"), "w") as f:
-      json.dump(OmegaConf.to_container(self.config, resolve=True), f, indent=2)
+      json.dump(OmegaConf.to_container(self.config, resolve=True), f, indent=4)
 
 
   def from_pretrained(self, model_path_or_repo: str):

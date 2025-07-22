@@ -5,41 +5,29 @@
 # override the earlier ones.
 defaults:
   - _self_ # refers to this config file
-  - model: llama-3-8b # refers to model/llama-3-8b.yaml
-  - dataset: wikitext # refers to dataset/wikitext.yaml
-  - task: train # refers to task/train.yaml
+  - model: llama-3-test # refers to model/llama-3-test.yaml
+  - dataset: tokenized # refers to dataset/tokenized.yaml
+  - trainer: llm # refers to trainer/llm.yaml
 
 seed: 42
-logging_steps: 10
 torch_dtype: bfloat16
 
-# set profile_start_step to a positive integer to enable profiling and start profiling 
-# at that step. If profile_end_step is not set, profiling will continue until for 
-# num_profile_steps (default 20) training steps or total step - 5 (to avoid issue #260)
-# Also, try to make number of profile profile steps >= 10
-profile_start_step: 3
-profile_end_step: null
-
-# The directory where profiling data will be stored. This might be overwritten 
-# when using tp run to launch the run using XPK
-profile_dir: profile
-
-# This might be overwritten when using tp run to launch the run using XPK
-output_dir: outputs
-
-# The name of the training run as it shows up on tensorboard.
-# If unspecified, defaults to the current date and time.
-run_name: null
+# logging and saving configuration
+debug: false
+project: prime-testing
+name: test
+notes: testing with defailt settings
 
 # The virtual device mesh shape to use within a TPU slice. This is also called
 # the "ICI mesh", since devices within a slice enjoy a faster network called
 # "Inter-Chip Interconnect".
 ici_mesh:
   data: 1
-  fsdp: 4
+  fsdp: 32
   tensor: 1
   expert: 1
   context: 1
+
 
 # Shape of the logical mesh where each element is a TPU slice. This is called
 # "Data Center Network (DCN) mesh" because TPU slices are usually connected
@@ -54,6 +42,7 @@ dcn_mesh:
   tensor: 1
   expert: 1
   context: 1
+
 
 # These are default values for model activation rematerialization configuration.
 # They can be overridden on the command line or by importing one of the presets

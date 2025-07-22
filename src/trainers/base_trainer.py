@@ -96,7 +96,7 @@ class BaseTrainer:
     ):
         self.config = config
         self.device = xm.xla_device()
-        self.global_batch_size = self.config.task.global_batch_size
+        self.global_batch_size = self.config.trainer.global_batch_size
         self.train_dataset = train_dataset
 
         # -- Model transformations --
@@ -120,10 +120,10 @@ class BaseTrainer:
         # create optimizer and learning rate scheduler
         self.optimizer = self._create_optimizer(config, model.parameters())
         self.lr_scheduler = get_scheduler(
-            name=self.config.task.lr_scheduler.type,
+            name=self.config.trainer.lr_scheduler.type,
             optimizer=self.optimizer,
-            num_warmup_steps=self.config.task.lr_scheduler.warmup_steps,
-            num_training_steps=self.config.task.max_steps,
+            num_warmup_steps=self.config.trainer.lr_scheduler.warmup_steps,
+            num_training_steps=self.config.trainer.max_steps,
         )
 
         # create the local data path
@@ -131,16 +131,16 @@ class BaseTrainer:
             os.makedirs(constants.LOCAL_DATA_PATH, exist_ok=True)
 
             # create the huggingface save repo
-            self.repo_name = f"{constants.HF_ID}/{self.config.wandb.project}_{self.config.wandb.name}"
+            self.repo_name = f"{constants.HF_ID}/{self.config.project}_{self.config.name}"
             hf.create_repo(
                 self.repo_name, private=True, exist_ok=True
             )
 
             # create the wandb project
             wandb.init(
-                project=self.config.wandb.project,
-                name=self.config.wandb.name,
-                notes=self.config.wandb.notes,
+                project=self.config.project,
+                name=self.config.name,
+                notes=self.config.notes,
             )
 
         # Execute all initialization work queued so far before starting training.
@@ -150,37 +150,37 @@ class BaseTrainer:
     @staticmethod
     def _create_optimizer(config, model_parameters) -> torch.optim.Optimizer:
         """Helper for optimizer initialization."""
-        if config.task.optimizer.type not in (_ADAFACTOR, _ADAMW):
+        if config.trainer.optimizer.type not in (_ADAFACTOR, _ADAMW):
             raise ValueError(
                 f"Supported optimizers are {[_ADAFACTOR, _ADAMW]}, "
-                f"but got {config.task.optimizer.type}"
+                f"but got {config.trainer.optimizer.type}"
             )
 
-        if config.task.optimizer.type == _ADAMW:
+        if config.trainer.optimizer.type == _ADAMW:
             optimizer = torch.optim.AdamW(
                 params=model_parameters,
-                lr=config.task.optimizer.learning_rate,
-                weight_decay=config.task.optimizer.weight_decay,
+                lr=config.trainer.optimizer.learning_rate,
+                weight_decay=config.trainer.optimizer.weight_decay,
                 betas=(
-                    config.task.optimizer.beta1,
-                    config.task.optimizer.beta2,
+                    config.trainer.optimizer.beta1,
+                    config.trainer.optimizer.beta2,
                 ),
             )
 
-        elif config.task.optimizer.type == _ADAFACTOR:
+        elif config.trainer.optimizer.type == _ADAFACTOR:
             # Adafactor optimizer does not support weight decay.
-            if "weight_decay" in config.task.optimizer:
+            if "weight_decay" in config.trainer.optimizer:
                 raise ValueError("Adafactor does not support weight decay.")
 
             optimizer = Adafactor(
                 params=model_parameters,
-                lr=config.task.optimizer.learning_rate,
+                lr=config.trainer.optimizer.learning_rate,
                 relative_step=False,
                 scale_parameter=False,
             )
 
         else:
-            raise AssertionError(f"Invalid optimizer type: {config.task.optimizer.type}")
+            raise AssertionError(f"Invalid optimizer type: {config.trainer.optimizer.type}")
 
         return optimizer
 
@@ -245,7 +245,7 @@ class BaseTrainer:
         )
         self.model._maybe_save_checkpoint(
             save_path,
-            convert_to_safetensors=self.config.task.convert_to_safetensors,
+            convert_to_safetensors=self.config.trainer.convert_to_safetensors,
         )
 
         api = hf.HfApi()
@@ -266,7 +266,7 @@ class BaseTrainer:
         self.model.zero_grad()
 
         # For now we assume that we will never train for more than one epoch
-        max_step = self.config.task.max_steps
+        max_step = self.config.trainer.max_steps
         train_loader = self._get_train_dataloader()
         steps_per_epoch = len(train_loader)
         train_iterator = iter(train_loader)
@@ -347,7 +347,7 @@ class BaseTrainer:
                 run_async=True,
             )
         
-        if step % self.config.task.checkpoint_interval == 0:    
+        if step % self.config.trainer.checkpoint_interval == 0:    
             logger.info("[SAVING] Starting distributed checkpoint …")
             self.model._maybe_save_checkpoint(self.config)
             logger.info("[SAVING] Finished distributed checkpoint")       
@@ -378,14 +378,14 @@ class BaseTrainer:
 
     def clip_gradients(self):
         """Clip gradients by the specified max norm and/or max absolute value."""
-        max_grad_norm = self.config.task.max_grad_norm
+        max_grad_norm = self.config.trainer.max_grad_norm
         if max_grad_norm is None or max_grad_norm <= 0:
             grad_norm = nn_utils.get_total_norm(self.model.parameters(), norm_type=2)
         else:
             grad_norm = nn_utils.clip_grad_norm_(
                 self.model.parameters(), max_norm=max_grad_norm, norm_type=2
             )
-        max_grad_value = self.config.task.max_grad_value
+        max_grad_value = self.config.trainer.max_grad_value
         if max_grad_value is not None and max_grad_value > 0:
             nn_utils.clip_grad_value_(self.model.parameters(), clip_value=max_grad_value)
         return grad_norm

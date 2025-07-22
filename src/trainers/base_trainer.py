@@ -13,15 +13,12 @@ Typical usage example:
 import logging
 import math
 import os
-from datetime import datetime
-from pathlib import Path
 from timeit import default_timer as timer
 
 import torch
 import torch.nn.utils as nn_utils
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.debug.profiler as xp
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.runtime as xr
 
@@ -31,13 +28,10 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset, IterableDataset
 from torch_xla.distributed.spmd.xla_sharding import apply_xla_patch_to_nn_linear
 from transformers import (
-    default_data_collator,
     get_scheduler,
 )
 from transformers.optimization import Adafactor
 
-from torchprime.metrics.mfu import compute_mfu
-from torchprime.metrics.step_duration import step_duration_from_latest_profile
 from torchprime.torch_xla_models.model_rewriting.assume_pure import (
     mark_pure_modules,
 )
@@ -49,9 +43,7 @@ from torchprime.torch_xla_models.model_rewriting.rematerialization_utils import 
 from torchprime.torch_xla_models.model_rewriting.sharding_initialization import (
     setup_sharding_and_mesh,
 )
-from torchprime.torch_xla_models.topology import get_num_slices
 from torchprime.utils.parallelism_utils import lb_cp_enabled, reorder_sequence
-from torchprime.utils.profiling import ensure_profile_end_step
 
 import wandb
 import huggingface_hub as hf

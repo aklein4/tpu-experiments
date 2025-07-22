@@ -20,7 +20,8 @@ class SingleSequenceCollator:
         self,
         batch,
     ):
-        
+        bs = len(batch)
+
         input_ids = []
         for x in batch:
 
@@ -29,7 +30,11 @@ class SingleSequenceCollator:
 
             # print(in_ids.shape, out_ids.shape, flush=True)
             # input_ids.append(torch.cat([in_ids, out_ids], dim=0))
-            input_ids.append(in_ids)
+            # input_ids.append(in_ids)
+
+        input_ids = [
+            torch.arange(np.random.randint(0, 100), dtype=torch.long) for _ in range(bs)
+        ]
 
         # pad to length
         input_ids = torch.nn.utils.rnn.pad_sequence(

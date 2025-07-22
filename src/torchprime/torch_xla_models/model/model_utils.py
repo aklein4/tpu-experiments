@@ -107,7 +107,7 @@ def save_sharded_safetensors_by_layer(
 
   grouped: dict[str, dict[str, torch.Tensor]] = defaultdict(dict)
   sizes: dict[str, int] = {}
-  for k, v in state_dict.items():
+  for k, v in tqdm(state_dict.items(), desc="Grouping parameters"):
     p = get_param_group_key(k)
     grouped[p][k] = v
     sizes[p] = sizes.get(p, 0) + v.numel() * v.element_size()

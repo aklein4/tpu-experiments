@@ -11,6 +11,7 @@ import json
 import logging
 import os
 from pathlib import Path
+from tqdm import tqdm
 
 import huggingface_hub
 import torch
@@ -79,10 +80,12 @@ class BaseXLAModel(nn.Module):
     assert constants.PROCESS_IS_MAIN(), "Export should only be done by the main process!"
 
     os.makedirs(save_directory, exist_ok=True)
+    logger.info("moving weights to CPU before saving...")
     state_dict = {
       k: v.cpu() if str(v.device).startswith("xla") else v
-      for k, v in self.state_dict().items()
+      for k, v in tqdm(self.state_dict().items(), desc="Moving weights to CPU")
     }
+    logger.info("Saving model state to %s", save_directory)
     model_utils.save_sharded_safetensors_by_layer(state_dict, save_directory)
 
     with open(os.path.join(save_directory, "config.json"), "w") as f:

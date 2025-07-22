@@ -31,6 +31,18 @@ assert xr.is_spmd() is True
 @hydra.main(version_base=None, config_path="configs", config_name="default")
 def main(config: omegaconf.DictConfig):
 
+    mess = " ===== DEVICE INFO ===== \n"
+    mess += f"XLA_DEVICE: {constants.XLA_DEVICE()}\n"
+    mess += f"XLA_LOCAL_RANK: {constants.XLA_LOCAL_RANK()}\n"
+    mess += f"XLA_RANK: {constants.XLA_RANK()}\n"
+    mess += f"XLA_LOCAL_MAIN: {constants.XLA_LOCAL_MAIN()}\n"
+    mess += f"XLA_MAIN: {constants.XLA_MAIN()}\n"
+    mess += f"NUM_XLA_DEVICES: {constants.NUM_XLA_DEVICES()}\n"
+    mess += f"NUM_PROCESSES: {xr.process_count()}\n
+    mess += f"PROCCESS_INDEX: {xr.process_index()}\n"
+    mess += " ======================= "
+    print(mess, flush=True)
+
     # Validate the config to avoid misuse and feature combination
     # Adding any new feature should update the config validator to
     # ensure different features can be combined together

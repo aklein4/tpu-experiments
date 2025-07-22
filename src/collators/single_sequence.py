@@ -24,8 +24,8 @@ class SingleSequenceCollator:
         input_ids = []
         for x in batch:
 
-            in_ids = torch.tensor(x["input_ids"]).long().reshape(-1)
-            out_ids = torch.tensor(x["output_ids"]).long().reshape(-1)
+            in_ids = torch.tensor(x["input_ids"]).long().flatten()
+            out_ids = torch.tensor(x["output_ids"]).long().flatten()
 
             input_ids.append(torch.cat([in_ids, out_ids], dim=0))
         
@@ -36,16 +36,22 @@ class SingleSequenceCollator:
             padding_value=self.pad_token_id,   
         )
         input_ids = input_ids[:, :self.sequence_length]
+        
+        pad = torch.full(
+            (input_ids.shape[0], self.sequence_length - input_ids.shape[1]),
+            self.pad_token_id,
+            dtype=input_ids.dtype,
+            device=input_ids.device
+        )
+
+        print(input_ids.shape, pad.shape, flush=True)
+
         input_ids = torch.cat(
             [
                 input_ids,
-                torch.full(
-                    (input_ids.shape[0], self.sequence_length - input_ids.shape[1]),
-                    self.pad_token_id,
-                    dtype=input_ids.dtype,
-                    device=input_ids.device
-                )
-            ]
+                pad
+            ],
+            dim=1
         )
 
         mask = input_ids != self.pad_token_id

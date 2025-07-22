@@ -36,4 +36,4 @@ COLLATOR_MODULE = "collators"
 HF_ID = "aklein4"
 
 # token for huggingface
-HF_TOKEN = os.environ("HF_TOKEN")
+HF_TOKEN = os.getenv("HF_TOKEN")

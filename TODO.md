@@ -13,7 +13,7 @@
 
 ### LLM
  - [x] Modify Llama to have combined qkv/gate_up for later mods
- - [x] Mask in attention (with segment ids)
+ - [x] Elementwise attention bias
  - [ ] Implement LLM loss
     - [x] Mask loss with padding
     - [ ] log acc
@@ -23,8 +23,8 @@
 ### ZLM
  - [ ] Implement ZLM Model
     - [ ] LoRa QKV and up/gate
-    - [ ] Account for pad in position_ids
-    - [ ] segment_ids from pad
+    - [ ] Account for pad tokens in position_ids
+    - [ ] attention bias for pad tokens
     - [ ] Implement Decoder
     - [ ] Implement Generator
     - [ ] Implement Encoder

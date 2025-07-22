@@ -28,7 +28,9 @@ pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-release
 export PATH="/home/$USER/.local/bin:$PATH"
 
 # install extras
-pip install transformers datasets==4.0.0 matplotlib huggingface_hub wandb hydra-core omegaconf
+pip install transformers datasets matplotlib huggingface_hub hydra-core omegaconf
+pip install --upgrade datasets
+pip install wandb
 
 # login to huggingface
 # huggingface-cli login --token $1 --add-to-git-credential

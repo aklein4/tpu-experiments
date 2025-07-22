@@ -81,6 +81,7 @@ class BaseXLAModel(nn.Module):
 
     os.makedirs(save_directory, exist_ok=True)
     logger.info("moving weights to CPU before saving...")
+    print([f"{k}: {v.shape}" for k, v in self.state_dict().items()], flush=True)
     state_dict = {
       k: v.detach().cpu() if str(v.device).startswith("xla") else v
       for k, v in tqdm(self.state_dict().items(), desc="Moving weights to CPU")

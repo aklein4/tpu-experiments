@@ -33,6 +33,7 @@ def main(config: omegaconf.DictConfig):
 
     mess = " ========= INFO ========= \n"
     mess += f"device_type: {xr.device_type()}\n"
+    mess += f"process_index: {xr.process_index()}\n"
     mess += f"local_process_count: {xr.local_process_count()}\n"
     mess += f"local_device_count: {xr.local_device_count()}\n"
     mess += f"addressable_device_count: {xr.addressable_device_count()}\n"

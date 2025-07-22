@@ -1,6 +1,7 @@
 
-[ ] Fix tokenizer/dataset loading
-[ ] Add wandb logging
-[ ] Fix master process logging
-[ ] Check inter-device syncing
-[ ] Implement ZLm
+ - [ ] Implement data loading/collating
+ - [ ] Add wandb logging
+ - [ ] Check inter-device syncing
+ - [ ] Implement and check checkpoint saving
+ - [ ] Test basic LLM
+ - [ ] Implment ZLm

@@ -15,6 +15,9 @@ DATASET_NAMES = [
     "OpenScience-tokenized",
     "math-tokenized",
     "chat-tokenized",
+    "HuggingFaceTB-finemath-finemath-4plus-tokenized",
+    "HuggingFaceFW-fineweb-edu-sample-10BT-tokenized",
+    "HuggingFaceFW-fineweb-sample-10BT-tokenized"
 ]
 
 

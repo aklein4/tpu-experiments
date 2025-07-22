@@ -139,7 +139,6 @@ class BaseXLAModel(nn.Module):
     save_dir.mkdir(parents=True, exist_ok=True)
     xm.mark_step()
     xm.wait_device_ops()
-    xm.rendezvous("checkpoint_save")
 
     # Step 3: Save the HF config files and tokenizer
     # if xr.process_index() == 0:

@@ -325,7 +325,6 @@ def convert_to_safetensors_on_cpu(model: torch.nn.Module, save_dir: Path) -> Non
       for name, tensor in model_sd.items()
     }
   }
-  logger.info("Created CPU placeholder state_dict")
 
   dist_cp.load(
     state_dict=reload_sd,
@@ -488,3 +487,4 @@ def save_hf_tokenizer(model_path_or_repo: str, save_dir: Path) -> None:
   save_dir = Path(save_dir)
   save_dir.mkdir(parents=True, exist_ok=True)
   tokenizer.save_pretrained(save_dir)
+  

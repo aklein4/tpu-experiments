@@ -337,22 +337,22 @@ class BaseTrainer:
 
                 logger.info(f"Process {constants.PROCESS_INDEX()} finished step closure for step {step}")
                 
-            xm.add_step_closure(
-                step_closure,
-                args=(
-                    epoch,
-                    step,
-                    loss,
-                    aux,
-                    trace_start_time,
-                    trace_end_time,
-                    self.lr_scheduler.get_last_lr()[0],
-                ),
-                run_async=True,
-            )
+            # xm.add_step_closure(
+            #     step_closure,
+            #     args=(
+            #         epoch,
+            #         step,
+            #         loss,
+            #         aux,
+            #         trace_start_time,
+            #         trace_end_time,
+            #         self.lr_scheduler.get_last_lr()[0],
+            #     ),
+            #     run_async=True,
+            # )
         
-            if (step+1) % self.config.trainer.checkpoint_interval == 0:    
-                self.save_checkpoint(step+1)
+            # if (step+1) % self.config.trainer.checkpoint_interval == 0:    
+            #     self.save_checkpoint(step+1)
             
             logger.info(f"Process {constants.PROCESS_INDEX()} starting first rendezvous for step {step}")
             xm.rendezvous(f"end_of_step {step}")

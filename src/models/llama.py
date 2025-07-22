@@ -34,7 +34,7 @@ from torchprime.torch_xla_models.loss import cross_entropy_loss
 from models.xla import BaseXLAModel
 
 
-logger = logging.get_logger(__name__)
+logger = logging.get_logger()
 
 
 class LlamaRMSNorm(nn.Module):

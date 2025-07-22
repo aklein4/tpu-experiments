@@ -22,7 +22,7 @@ from torchprime.layers.sequential import HomogeneousSequential
 from torchprime.sharding.shard_model import wrap_module
 from torchprime.torch_xla_models import offloading, remat_all, scan_layers
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 def add_activation_checkpointing_and_scan(

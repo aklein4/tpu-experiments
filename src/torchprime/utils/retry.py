@@ -8,7 +8,7 @@ T = TypeVar("T")
 
 
 def retry(fn: Callable[[], T], retry_count: int = 3, retry_delay: float = 10) -> T:
-  logger = logging.getLogger(__name__)
+  logger = logging.getLogger()
   for attempt in range(retry_count):
     try:
       return fn()

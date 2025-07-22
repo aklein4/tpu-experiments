@@ -13,7 +13,7 @@ logging.basicConfig(
   level=logging.INFO,
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 def log_basic_system_info() -> None:

@@ -54,7 +54,7 @@ from utils.import_utils import import_class
 from utils import constants
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 
 def get_model_dtype(module: nn.Module) -> torch.dtype:

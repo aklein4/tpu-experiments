@@ -11,6 +11,7 @@ class OnlyMain(logging.Filter):
 
         self.is_main = constants.PROCESS_IS_MAIN()
 
+
     def filter(self, record: logging.LogRecord) -> bool:
         return self.is_main
     

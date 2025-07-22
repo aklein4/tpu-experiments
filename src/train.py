@@ -23,7 +23,7 @@ from utils.import_utils import import_class
 from utils.logging_utils import OnlyMain
 
 transformers.utils.check_min_version("4.39.3")
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 xr.use_spmd()
 assert xr.is_spmd() is True
@@ -46,9 +46,9 @@ def main(config: omegaconf.DictConfig):
     # set up logging
     log_level = logging.INFO
     logger.setLevel(log_level)
+    logger.addFilter(OnlyMain())
     datasets.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.set_verbosity(log_level)
-    transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
 
     # set training seeds
@@ -90,15 +90,11 @@ def main(config: omegaconf.DictConfig):
 
 if __name__ == "__main__":
 
-    # only log to stdout if this is the main process
-    handler = logging.StreamHandler(sys.stdout)
-    handler.addFilter(OnlyMain())
-
     # set up logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
-        handlers=[handler],
+        handlers=[logging.StreamHandler(sys.stdout)],
     )
     
     sys.exit(main())

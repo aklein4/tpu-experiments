@@ -24,7 +24,7 @@ import torch.distributed.checkpoint as dist_cp
 import torch_xla.experimental.distributed_checkpoint as xc
 from transformers import AutoTokenizer
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 HF_MODEL_CONFIG_FILES = [
   "config.json",

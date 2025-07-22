@@ -325,11 +325,13 @@ def convert_to_safetensors_on_cpu(model: torch.nn.Module, save_dir: Path) -> Non
       for name, tensor in model_sd.items()
     }
   }
+  logger.info("Created CPU placeholder state_dict")
 
   dist_cp.load(
     state_dict=reload_sd,
     storage_reader=dist_cp.FileSystemReader(str(save_dir)),
     planner=xc.SPMDLoadPlanner(),
+    no_dist=True,
   )
   logger.info("Checkpoint fully materialised on CPU")
 

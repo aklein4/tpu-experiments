@@ -1,5 +1,8 @@
 """Train script for LLMs using PyTorch/XLA with some torchax for lowering."""
 
+import os
+os.environ['PJRT_DEVICE'] = 'TPU'
+
 import logging
 import sys
 
@@ -79,9 +82,13 @@ def main(config: omegaconf.DictConfig):
 
 
 if __name__ == "__main__":
+    print("Starting training script...", flush=True)
+
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
         handlers=[logging.StreamHandler(sys.stdout)],
     )
+    
+    print("Running main function...", flush=True)
     sys.exit(main())

@@ -193,6 +193,7 @@ class BaseTrainer:
                 self.train_dataset,
                 num_replicas=num_replicas,
                 rank=xr.process_index(),
+                shuffle=False,
             )
         else:
             # Without minibatch, every process loads the global batch the same way.
@@ -200,6 +201,7 @@ class BaseTrainer:
                 self.train_dataset,
                 num_replicas=1,
                 rank=0,
+                shuffle=False,
             )
 
         assert self.global_batch_size is not None
@@ -220,6 +222,7 @@ class BaseTrainer:
             batch_size=batch_size,
             sampler=sampler,
             drop_last=True,
+            shuffle=False
         )
         loader = pl.MpDeviceLoader(
             dataloader, self.device, input_sharding=self.input_sharding_spec

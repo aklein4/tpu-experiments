@@ -283,6 +283,7 @@ class BaseTrainer:
                 epoch += 1
                 train_iterator = iter(train_loader)
                 batch = next(train_iterator)
+            logger.info(f"Process {constants.PROCESS_INDEX()} got batch at step {step}")
 
             # when context parallel and load balance context parallel is enabled,
             # we will reorder the sequence here for each batch
@@ -297,9 +298,11 @@ class BaseTrainer:
                     for key, value in batch.items()
                 }
 
+            logger.info(f"Process {constants.PROCESS_INDEX()} starting step {step}")
             trace_start_time = timer()
             loss, aux = self.train_step(batch)
             trace_end_time = timer()
+            logger.info(f"Process {constants.PROCESS_INDEX()} finished step {step}")
 
             def step_closure(
                 epoch, step, loss, aux, trace_start_time, trace_end_time, lr
@@ -331,6 +334,8 @@ class BaseTrainer:
 
                 if math.isnan(loss):
                     raise ValueError(f"Loss is NaN at step {step}")
+
+                logger.info(f"Process {constants.PROCESS_INDEX()} finished step closure for step {step}")
                 
             xm.add_step_closure(
                 step_closure,
@@ -349,10 +354,15 @@ class BaseTrainer:
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
             
+            logger.info(f"Process {constants.PROCESS_INDEX()} starting first rendezvous for step {step}")
             xm.rendezvous(f"end_of_step {step}")
+            logger.info(f"Process {constants.PROCESS_INDEX()} finished first rendezvous for step {step}")
             xm.mark_step()
+            logger.info(f"Process {constants.PROCESS_INDEX()} waiting for device ops after mark_step {step}")
             xm.wait_device_ops()
+            logger.info(f"Process {constants.PROCESS_INDEX()} finished waiting for device ops after mark_step {step}")
             xm.rendezvous(f"after_step {step}")
+            logger.info(f"Process {constants.PROCESS_INDEX()} FINISHED step {step}")
 
         xm.wait_device_ops()
         logger.info("Finished training run")

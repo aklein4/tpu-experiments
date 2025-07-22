@@ -14,7 +14,7 @@ class StreamingDataset(Dataset):
         self.hf_ds = hf_ds
         self.fake_length = fake_length
 
-        self.iter = self._init_iter()
+        self._init_iter()
 
     
     def __len__(self):

@@ -362,7 +362,7 @@ class BaseTrainer:
         self.lr_scheduler.step()
         self.model.zero_grad()
 
-        return loss
+        return loss, aux
 
 
     def forward(self, batch: dict):

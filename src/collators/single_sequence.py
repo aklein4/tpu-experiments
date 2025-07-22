@@ -61,6 +61,8 @@ class SingleSequenceCollator:
 
         mask = input_ids != self.pad_token_id
 
+        return input_ids
+
         return {
             "input_ids": input_ids,
             "mask": mask

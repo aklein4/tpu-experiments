@@ -12,24 +12,9 @@ Example:
     . setup_vm.sh <HF_TOKEN> <WANDB_TOKEN>
 '
 
-# # install miniconda
-# mkdir -p ~/miniconda3
-# wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
-# bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
-# rm ~/miniconda3/miniconda.sh
-
-# # activate conda
-# source ~/miniconda3/bin/activate
-# conda init --all
-
-# # create conda environment
-# conda create -n tpu -y python=3.13
-# conda activate tpu
-
 # # upgrade and update pip
-# conda install -y pip
 python -m pip install --upgrade pip
-python -m pip install --upgrade setuptools==69.5.1
+python -m pip install --upgrade setuptools
 
 # install torch
 pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu

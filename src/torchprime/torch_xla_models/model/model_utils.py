@@ -151,11 +151,11 @@ def initialize_model_class(model_config):
       module = None
 
   if module is None:
-    print(f"Error: Failed to import module '{module_name}' or 'model.{module_name}'")
+    logger.error(f"Error: Failed to import module '{module_name}' or 'model.{module_name}'")
     sys.exit(1)
 
   if not hasattr(module, model_class_name):
-    print(f"Error: Class '{model_class_name}' not found in module '{module.__name__}'")
+    logger.error(f"Error: Class '{model_class_name}' not found in module '{module.__name__}'")
     sys.exit(1)
 
   model_class = getattr(module, model_class_name)

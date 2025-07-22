@@ -309,7 +309,6 @@ class LlamaModel(nn.Module):
     super().__init__()
     self.vocab_size = config.vocab_size
     self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size)
-    print("embed_tokens initialized", flush=True)
 
     # `HomogeneousSequential` is similar to `nn.Sequential` but can be compiled with
     # `scan` described in https://pytorch.org/xla/release/r2.6/features/scan.html.
@@ -319,9 +318,7 @@ class LlamaModel(nn.Module):
         for layer_idx in range(config.num_hidden_layers)
       ]
     )
-    print("layers initialized", flush=True)
     self.norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-    print("norm initialized", flush=True)
 
     rope_scaling = config.get("rope_scaling", None)
     head_dim = config.hidden_size // config.num_attention_heads
@@ -331,7 +328,7 @@ class LlamaModel(nn.Module):
     self.rotary_emb = LlamaRotaryEmbedding(
       head_dim=head_dim, rope_theta=config.rope_theta, scaling=rope_scaling
     )
-    print("rotary_emb initialized", flush=True)
+
 
   @xp.trace_me("LlamaModel")
   def forward(
@@ -380,19 +377,15 @@ class LlamaModel(nn.Module):
 class LlamaForCausalLM(BaseXLAModel):
   def __init__(self, config):
     super().__init__()
-    print("supered", flush=True)
 
     self.config = config
     self.model = LlamaModel(config)
-    print("LlamaModel initialized", flush=True)
 
     self.vocab_size = config.vocab_size
     self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
-    print("lm_head initialized", flush=True)
 
     # Initialize weights and apply final processing
     self.apply(self._init_weights)
-    print("Weights initialized", flush=True)
 
 
   @xp.trace_me("LlamaForCausalLM")

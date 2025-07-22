@@ -31,31 +31,16 @@ assert xr.is_spmd() is True
 @hydra.main(version_base=None, config_path="configs", config_name="default")
 def main(config: omegaconf.DictConfig):
 
-    mess = " ========= INFO ========= \n"
-    mess += f"device_type: {xr.device_type()}\n"
-    mess += f"process_index: {xr.process_index()}\n"
-    mess += f"local_process_count: {xr.local_process_count()}\n"
-    mess += f"local_device_count: {xr.local_device_count()}\n"
-    mess += f"addressable_device_count: {xr.addressable_device_count()}\n"
-    mess += f"glocal_device_count: {xr.global_device_count()}\n"
-    mess += f"global_runtime_device_count: {xr.global_runtime_device_count()}\n"
-    mess += f"world_size: {xr.world_size()}\n"
-    mess += f"global_ordinal: {xr.global_ordinal()}\n"
-    mess += f"local_ordinal: {xr.local_ordinal()}\n"
-    mess += f"is_master_ordinal (local): {torch_xla.core.xla_model.is_master_ordinal(local=True)}\n"
-    mess += f"is_master_ordinal (global): {torch_xla.core.xla_model.is_master_ordinal(local=False)}\n"
-    mess += " ======================= "
-    print(mess, flush=True)
-
     # Validate the config to avoid misuse and feature combination
     # Adding any new feature should update the config validator to
     # ensure different features can be combined together
-    # config_vaidator(config)
+    config_vaidator(config)
 
     # Print the config for debugging
-    print("\n ===== Configuration ===== \n", flush=True)
-    print(omegaconf.OmegaConf.to_yaml(config), flush=True)
-    print("\n ========================= \n", flush=True)
+    if constants.PROCESS_IS_MAIN:
+        print("\n ===== Configuration ===== \n", flush=True)
+        print(omegaconf.OmegaConf.to_yaml(config), flush=True)
+        print("\n ========================= \n", flush=True)
 
     # set up logging
     log_level = logging.INFO
@@ -64,12 +49,10 @@ def main(config: omegaconf.DictConfig):
     transformers.utils.logging.set_verbosity(log_level)
     transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
-    print(f"Logging level set to: {log_level}", flush=True)
 
     # set training seeds
     transformers.set_seed(config.seed)
     torch_xla.manual_seed(config.seed)
-    print(f"Set training seed to: {config.seed}", flush=True)
 
     # Set the model dtype to bfloat16, and set the default device to the XLA device.
     # This will capture the model constructor into a graph so that we can add
@@ -79,15 +62,14 @@ def main(config: omegaconf.DictConfig):
     with model_utils.set_default_dtype(model_dtype), torch_xla.device():
         model_cls = import_class(config.model.model_class, constants.MODEL_MODULE)
         model = model_cls(config.model)
-    print(f"Model class initialized: {config.model.model_class}", flush=True)
 
     # print model information
     model_utils.log_parameter_breakdown(model, logger, simple=True)
-    print("Model parameter breakdown logged.", flush=True)
+    logger.info(f"Model initialized: {config.model.model_class}")
 
     # Create the dataset
     data = get_dataset(**config.data.dataset)
-    print(f"Dataset loaded: {config.data.dataset.name}", flush=True)
+    logger.info(f"Dataset loaded: {config.data.dataset.name}")
 
     # initialize the trainer
     trainer_cls = import_class(config.trainer.trainer_class, constants.TRAINER_MODULE)
@@ -96,10 +78,9 @@ def main(config: omegaconf.DictConfig):
         config=config,
         train_dataset=data,
     )
-    print(f"Trainer initialized: {config.trainer.trainer_class}", flush=True)
+    logger.info(f"Trainer initialized: {config.trainer.trainer_class}")
 
     # TODO(https://github.com/pytorch/xla/issues/8954): Remove `jax_env_context`.
-    print("Starting training loop...", flush=True)
     with torch_xla._internal.jax_workarounds.jax_env_context():
         trainer.train_loop()
 
@@ -107,13 +88,17 @@ def main(config: omegaconf.DictConfig):
 
 
 if __name__ == "__main__":
-    print("Starting training script...", flush=True)
 
+    # only log to stdout if this is the main process
+    pipe = open(os.devnull, 'w')
+    if constants.PROCESS_IS_MAIN:
+        pipe = sys.stdout
+
+    # set up logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
-        handlers=[logging.StreamHandler(sys.stdout)],
+        handlers=[logging.StreamHandler(pipe)],
     )
     
-    print("Running main function...", flush=True)
     sys.exit(main())

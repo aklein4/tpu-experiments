@@ -2,7 +2,7 @@
 import os
 
 try:
-    import torch_xla.core.xla_model as xm
+    import torch_xla.runtime as xr
     XLA_AVAILABLE = True
 except ImportError:
     print("Warning: torch_xla not found", flush=True)
@@ -15,26 +15,11 @@ BASE_PATH = os.path.dirname( # src
     )
 )
 
-# device of current process
-XLA_DEVICE = lambda: xm.xla_device()
-
-# local id of the current device
-XLA_LOCAL_RANK = lambda: xm.get_local_ordinal()
-
 # id of the current device
-XLA_RANK = lambda: xm.get_ordinal()
+PROCESS_INDEX = lambda: xr.process_index()
 
 # whether this is the main process on its device
-XLA_LOCAL_MAIN = lambda: xm.is_master_ordinal(local=True)
-
-# whether this is the main process
-XLA_MAIN = lambda: xm.is_master_ordinal(local=False)
-
-# number of devices
-NUM_XLA_DEVICES = lambda: xm.xrt_world_size()
-
-# local data path
-LOCAL_DATA_PATH = os.path.join(BASE_PATH, "local_data")
+PROCESS_IS_MAIN = lambda: xr.process_index() == 0
 
 # paths to config files
 CONFIG_PATH = os.path.join(BASE_PATH, "configs")

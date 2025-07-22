@@ -22,5 +22,4 @@ def import_class(path, *args):
     else:
         raise ImportError(f'Could not find class {class_name} in module {module_name}.')
     
-    print(f"Imported class {class_name} from module {module_name}", flush=True)
     return class_

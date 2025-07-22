@@ -38,7 +38,7 @@ def main(config: omegaconf.DictConfig):
     mess += f"XLA_LOCAL_MAIN: {constants.XLA_LOCAL_MAIN()}\n"
     mess += f"XLA_MAIN: {constants.XLA_MAIN()}\n"
     mess += f"NUM_XLA_DEVICES: {constants.NUM_XLA_DEVICES()}\n"
-    mess += f"NUM_PROCESSES: {xr.process_count()}\n
+    mess += f"NUM_PROCESSES: {xr.process_count()}\n"
     mess += f"PROCCESS_INDEX: {xr.process_index()}\n"
     mess += " ======================= "
     print(mess, flush=True)

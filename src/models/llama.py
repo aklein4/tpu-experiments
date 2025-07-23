@@ -215,7 +215,7 @@ class LlamaAttention(nn.Module):
     position_ids: torch.LongTensor | None = None,
     elementwise_attention_bias: torch.Tensor | None = None,
   ) -> torch.FloatTensor:
-    bsz, q_len, _ = hidden_states.size()
+    bsz, q_len, _ = hidden_states.shape
 
     qkv_states = self.qkv_proj(hidden_states)
     query_states, key_states, value_states = torch.split(
@@ -358,7 +358,7 @@ class LlamaModel(nn.Module):
     # convert input ids to embeddings
     inputs_embeds = self.embed_tokens(input_ids)
 
-    seq_length = inputs_embeds.size(1)
+    seq_length = inputs_embeds.shape[1]
 
     # TODO(https://github.com/pytorch/xla/issues/8783): Pass position_ids as `long()`
     # when `scan` can take non-differentiable inputs.

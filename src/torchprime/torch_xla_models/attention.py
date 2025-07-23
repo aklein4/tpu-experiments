@@ -50,7 +50,7 @@ class AttentionModule(nn.Module):
       key_states = repeat_kv(key_states, num_key_value_groups)
       value_states = repeat_kv(value_states, num_key_value_groups)
 
-    bsz, num_heads, q_len, head_dim = query_states.size()
+    bsz, num_heads, q_len, head_dim = query_states.shape
     # TODO: q, k dim unintentionally changed after the apply_rotary_pos_emb. Use
     # v's dim temporarily to bypass shape assertion failure. Remove the
     # following line after resolving
@@ -152,10 +152,10 @@ class AttentionModule(nn.Module):
         attn_weights = torch.matmul(
           query_states, key_states.transpose(2, 3)
         ) / math.sqrt(head_dim)
-        if attn_weights.size() != (bsz, num_heads, q_len, kv_seq_len):
+        if attn_weights.shape != (bsz, num_heads, q_len, kv_seq_len):
           raise ValueError(
             f"Attention weights should be of size {(bsz, num_heads, q_len, kv_seq_len)}, but is"
-            f" {attn_weights.size()}"
+            f" {attn_weights.shape}"
           )
         if attention_mask is not None:  # no matter the length, we just slice it
           causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
@@ -169,9 +169,9 @@ class AttentionModule(nn.Module):
         )
         attn_output = torch.matmul(attn_weights, value_states)
 
-    if attn_output.size() != (bsz, num_heads, q_len, head_dim):
+    if attn_output.shape != (bsz, num_heads, q_len, head_dim):
       raise ValueError(
         f"`attn_output` should be of size {(bsz, num_heads, q_len, head_dim)}, but is"
-        f" {attn_output.size()}"
+        f" {attn_output.shape}"
       )
     return attn_output

@@ -139,7 +139,7 @@ def splash_attention_jax_wrapper(
   value,
   decoder_segment_ids,
   causal: bool,
-  config: SplashAttentionConfig,
+  config,
   attn_logits_soft_cap,
   q_seq_shards,
 ):

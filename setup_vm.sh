@@ -14,7 +14,7 @@ Example:
 
 # # upgrade and update pip
 python -m pip install --upgrade pip
-python -m pip install --upgrade setuptools
+python -m pip install setuptools==67.7.2
 
 # install torch
 pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu

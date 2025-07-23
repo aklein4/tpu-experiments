@@ -8,7 +8,7 @@ model_id: llama-3-test
 model_class: llama.LlamaForCausalLM  # Used to import the model from this class
 pretrained_model: null
 
-vocab_size: 33000
+vocab_size: 32101
 bos_token_id: 1
 eos_token_id: 2
 pad_token_id: 32000

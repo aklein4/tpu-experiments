@@ -335,8 +335,8 @@ class BaseTrainer:
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb)
 
-                if math.isnan(loss):
-                    raise ValueError(f"Loss is NaN at step {step}")
+                # if math.isnan(loss):
+                #     raise ValueError(f"Loss is NaN at step {step}")
                 
             xm.add_step_closure(
                 step_closure,

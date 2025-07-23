@@ -11,10 +11,7 @@ def import_class(path, *args):
         module_name = f"{a}.{module_name}"
 
     # import the module
-    try:
-        module = importlib.import_module(module_name)
-    except ModuleNotFoundError:
-        raise ImportError(f'Could not import module {module_name}')
+    module = importlib.import_module(module_name)
 
     # import the class
     if hasattr(module, class_name):

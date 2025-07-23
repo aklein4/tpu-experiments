@@ -25,6 +25,6 @@ class FakeCollator:
         return torch.randint(
             low=0,
             high=self.vocab_size,
-            shape=(bs, self.sequence_length),
+            size=(bs, self.sequence_length),
             dtype=torch.long,
         )

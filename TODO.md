@@ -14,21 +14,21 @@
 ### LLM
  - [x] Modify Llama to have combined qkv/gate_up for later mods
  - [x] Elementwise attention bias
- - [ ] Implement LLM loss
+ - [x] Implement LLM loss
     - [x] Mask loss with padding
-    - [ ] log acc
-    - [ ] log pcorr
+    - [x] log acc
+    - [x] log pcorr
  - [ ] Train ZLM-equivalent Llama model
 
 ### ZLM
- - [ ] Implement ZLM Model
-    - [ ] LoRa QKV and up/gate
-    - [ ] Account for pad tokens in position_ids
-    - [ ] attention bias for pad tokens
-    - [ ] Implement Decoder
-    - [ ] Implement Generator
-    - [ ] Implement Encoder
-    - [ ] Implement parameterized alpha for RMS scaling
+ - [x] Implement ZLM Model
+    - [x] LoRa QKV and up/gate
+    - [x] Account for pad tokens in position_ids
+    - [x] attention bias for pad tokens
+    - [x] Implement Decoder
+    - [x] Implement Generator
+    - [x] Implement Encoder
+    - [x] Implement parameterized alpha for RMS scaling
  - [ ] Implement ZLM Loss
     - [ ] LM loss, acc, pcorr
     - [ ] KL loss hook for alpha?

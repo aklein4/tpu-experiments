@@ -19,6 +19,16 @@ class RetryIterableDataset(datasets.IterableDataset):
             raise StopIteration
 
 
+class FakeIterableDataset(datasets.IterableDataset):
+
+    def __init__(self):
+        pass
+
+
+    def __iter__(self):
+        yield {"text": "This is a fake dataset for testing purposes."}
+
+
 def get_dataset(name: str, **kwargs) -> datasets.Dataset:
     """
     Get a dataset by name.
@@ -29,10 +39,13 @@ def get_dataset(name: str, **kwargs) -> datasets.Dataset:
     Returns:
         datasets.Dataset: The requested dataset.
     """
+    if name == "fake":
+        return FakeIterableDataset()
+
     ds = datasets.load_dataset(name, **kwargs, token=constants.HF_TOKEN)
 
     if "streaming" in kwargs.keys() and kwargs["streaming"]:
-        ds = ds.shard(num_shards=(constants.PROCESS_COUNT()+10), index=(constants.PROCESS_INDEX()+10))
+        ds = ds.shard(num_shards=constants.PROCESS_COUNT(), index=constants.PROCESS_INDEX())
 
     return ds
 

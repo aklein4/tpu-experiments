@@ -356,9 +356,9 @@ class BaseTrainer:
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
             
-            xm.mark_step()
-            xm.wait_device_ops()
-            xm.rendezvous(f"after_step {step}")
+            # xm.mark_step()
+            # xm.wait_device_ops()
+            # xm.rendezvous(f"after_step {step}")
             # logger.info(f"Process {constants.PROCESS_INDEX()} finished mark_step {step}")
             # xm.wait_device_ops()
             # logger.info(f"Process {constants.PROCESS_INDEX()} finished waiting for device ops after mark_step {step}")

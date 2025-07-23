@@ -25,6 +25,10 @@ class FakeIterableDataset(datasets.IterableDataset):
         pass
 
 
+    def __len__(self):
+        return 1_000_000_000
+    
+
     def __iter__(self):
         yield {"text": "This is a fake dataset for testing purposes."}
 

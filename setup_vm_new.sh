@@ -17,23 +17,21 @@ pip install --upgrade pip
 pip install --upgrade setuptools
 
 # install torch
-pip3 install torch==2.9.0.dev20250423+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+pip3 install torch==2.8.0.dev20250709+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
 
 # install torch_xla for TPU VM
 # Edit `cp310-cp310` to fit your desired Python version as needed
-pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.9.0.dev-cp310-cp310-linux_x86_64.whl' \
-  -f https://storage.googleapis.com/libtpu-wheels/index.html
+pip install https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev20250709-cp310-cp310-linux_x86_64.whl
 
 # update path(?)
 export PATH="/home/$USER/.local/bin:$PATH"
 
 # install extras
-pip install transformers datasets matplotlib huggingface_hub hydra-core omegaconf
-pip install --upgrade datasets
-pip install wandb
+pip install setuptools==67.7.2
+pip install transformers==4.52.1 datasets==4.0.0 hydra-core==1.3.0 optax==0.2.4 wandb
 
 # login to huggingface
 # huggingface-cli login --token $1 --add-to-git-credential
 
 # login to wandb
-python -m wandb login $2
+python -m wandb login $1

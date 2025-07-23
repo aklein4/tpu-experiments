@@ -308,9 +308,10 @@ class BaseTrainer:
             trace_end_time = timer()
 
             def step_closure(
-                epoch, step, loss, aux, trace_start_time, trace_end_time, lr
+                epoch, step, loss, aux, trace_start_time, trace_end_time, lr_scheduler
             ):
                 loss = loss.detach().item()
+                lr = lr_scheduler.get_last_lr()[0]
 
                 logger.info(
                     "Epoch: %.4f, step: %d, loss: %.4f, lr: %.2e, trace time: %.2f ms",
@@ -347,9 +348,9 @@ class BaseTrainer:
                     aux,
                     trace_start_time,
                     trace_end_time,
-                    self.lr_scheduler.get_last_lr()[0],
+                    self.lr_scheduler,
                 ),
-                run_async=True,
+                run_async=False,
             )
         
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    

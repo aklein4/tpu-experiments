@@ -13,7 +13,7 @@ checkpoint_interval: 20000  # Save a checkpoint every N steps
 optimizer:
   type: adamw
 
-  learning_rate: 1.6e-4
+  learning_rate: 1.0e-4
   weight_decay: 0.1
 
   beta1: 0.9

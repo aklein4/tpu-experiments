@@ -9,7 +9,7 @@ def shift_tokens(logits, labels):
     return logits[..., :-1, :].contiguous(), labels[..., 1:].contiguous()
 
 
-def cross_entropy_loss(logits: torch.Tensor, labels: torch.Tensor, vocab_size: int, ignore_index: int = -100) -> torch.Tensor:
+def cross_entropy_loss(logits: torch.Tensor, labels: torch.Tensor, vocab_size: int, ignore_index: int = -100, shifted=False) -> torch.Tensor:
     """
     Computes cross entropy loss of `logits` against the ground truth `labels` during
     next token prediction.
@@ -17,7 +17,10 @@ def cross_entropy_loss(logits: torch.Tensor, labels: torch.Tensor, vocab_size: i
     Useful as the loss function of a LLM in pretraining or supervised finetuning.
     """
     # Shift so that tokens < n predict n
-    shift_logits, shift_labels = shift_tokens(logits, labels)
+    if shifted:
+        shift_logits, shift_labels = logits, labels
+    else:
+        shift_logits, shift_labels = shift_tokens(logits, labels)
     # Flatten the tokens
     loss_fct = CrossEntropyLoss(ignore_index=ignore_index)
     shift_logits = shift_logits.view(-1, vocab_size)
@@ -26,7 +29,7 @@ def cross_entropy_loss(logits: torch.Tensor, labels: torch.Tensor, vocab_size: i
     return loss_fct(shift_logits, shift_labels)
 
 
-def accuracy(logits: torch.Tensor, labels: torch.Tensor, ignore_index: int = -100) -> float:
+def accuracy(logits: torch.Tensor, labels: torch.Tensor, ignore_index: int = -100, shifted=False) -> float:
     """
     Computes the accuracy of the model's predictions against the ground truth labels.
     
@@ -38,7 +41,8 @@ def accuracy(logits: torch.Tensor, labels: torch.Tensor, ignore_index: int = -10
     Returns:
         float: The accuracy as a percentage.
     """
-    logits, labels = shift_tokens(logits, labels)
+    if not shifted:
+        logits, labels = shift_tokens(logits, labels)
     mask = labels != ignore_index
 
     correct = (logits.argmax(dim=-1) == labels).float()
@@ -49,8 +53,9 @@ def accuracy(logits: torch.Tensor, labels: torch.Tensor, ignore_index: int = -10
     return correct / total    
 
 
-def pcorr(logits: torch.Tensor, labels: torch.Tensor, ignore_index: int = -100) -> float:
-    logits, labels = shift_tokens(logits, labels)
+def pcorr(logits: torch.Tensor, labels: torch.Tensor, ignore_index: int = -100, shifted=False) -> float:
+    if not shifted:
+        logits, labels = shift_tokens(logits, labels)
     mask = labels != ignore_index
 
     logp = -F.cross_entropy(

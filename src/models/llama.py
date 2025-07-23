@@ -418,11 +418,16 @@ class LlamaForCausalLM(BaseXLAModel):
     labels: torch.LongTensor | None = None,
     attention_mask: torch.FloatTensor | None = None,
   ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
+    
     hidden_states = self.model(input_ids=input_ids, attention_mask=attention_mask)
+    
     logits = self.lm_head(hidden_states)
-    logits = logits.float()
+    logits = torch.nn.functional.log_softmax(logits, dim=-1)
+    
     if labels is None:
       return logits, None
+    
     loss = cross_entropy_loss(logits, labels=labels, vocab_size=self.config.vocab_size, ignore_index=self.config.pad_token_id)
+    
     return logits, loss
   

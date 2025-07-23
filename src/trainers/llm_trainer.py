@@ -13,13 +13,16 @@ class LLMTrainer(BaseTrainer):
         logits, _ = self.model(
             input_ids=input_ids,
         )
+        shift_logits, shift_labels = loss_utils.shift_tokens(logits, input_ids)
 
         loss = loss_utils.cross_entropy_loss(
-            logits, input_ids, v_size, pad_token_id
+            shift_logits, shift_labels,
+            v_size, pad_token_id,
+            shifted=True
         )
         aux = {
-            'acc': loss_utils.accuracy(logits, input_ids, pad_token_id),
-            'pcorr': loss_utils.pcorr(logits, input_ids, pad_token_id)
+            'acc': loss_utils.accuracy(shift_logits, shift_labels, pad_token_id, shifted=True),
+            'pcorr': loss_utils.pcorr(shift_logits, shift_labels, pad_token_id, shifted=True)
         }
 
         return loss, aux

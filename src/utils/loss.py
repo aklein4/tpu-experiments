@@ -60,7 +60,7 @@ def pcorr(logits: torch.Tensor, labels: torch.Tensor, ignore_index: int = -100) 
     )
     
     p = logp.exp()
-    p = p.masked_fill(~mask, 0.0).sum()
+    p = p.masked_fill(~mask.view(-1), 0.0).sum()
 
     total = mask.float().sum() + 1
 

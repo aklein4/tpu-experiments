@@ -21,6 +21,7 @@ from data.datasets import get_dataset
 from utils import constants
 from utils.import_utils import import_class
 from utils.logging_utils import OnlyMain
+from utils.jax_workarounds import jax_env_context
 
 transformers.utils.check_min_version("4.39.3")
 logger = logging.getLogger()
@@ -82,7 +83,7 @@ def main(config: omegaconf.DictConfig):
     logger.info(f"Trainer initialized: {config.trainer.trainer_class}")
 
     # TODO(https://github.com/pytorch/xla/issues/8954): Remove `jax_env_context`.
-    with torch_xla._internal.jax_workarounds.jax_env_context():
+    with jax_env_context():
         trainer.train_loop()
 
     return 0

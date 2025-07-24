@@ -334,7 +334,10 @@ class BaseTrainer:
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
-                    wandb.log(to_wandb)
+                    try:
+                        wandb.log(to_wandb)
+                    except Exception as e:
+                        logger.info(f"Failed to log to wandb:\n{e}")
 
                 # if math.isnan(loss):
                 #     raise ValueError(f"Loss is NaN at step {step}")

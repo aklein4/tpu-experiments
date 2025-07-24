@@ -1,7 +1,7 @@
 # This is for basic training loop, i.e., forward/backward pass without any special task logic.
 name: train
-global_batch_size: 4
-max_steps: 15
+global_batch_size: 256
+max_steps: 1000
 
 # Optimizer configuration.
 optimizer:

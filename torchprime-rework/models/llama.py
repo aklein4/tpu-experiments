@@ -443,11 +443,15 @@ class LlamaForCausalLM(BaseXLAModel):
     logits = self.lm_head(hidden_states)
     logits = logits.float()
 
-    # logits = torch.nn.functional.log_softmax(
-    #   logits,
-    #   dim=-1,
-    #   dtype=logits.dtype,
-    # )
+    device_type = logits.device.type
+    device_type = (
+      device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
+    )
+    with torch.autocast(device_type=device_type, enabled=False):
+      logits = torch.nn.functional.log_softmax(
+        logits,
+        dim=-1,
+      )
     
     if labels is None:
       return logits, None

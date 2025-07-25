@@ -54,6 +54,7 @@ import huggingface_hub as hf
 from models.xla import BaseXLAModel
 from utils.import_utils import import_class
 from utils import constants
+from utils.tuple_dict import TupleDict
 
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,7 @@ class BaseTrainer:
     """
 
     minibatch: bool
+    aux_keys: tuple[str] = None
 
     def __init__(
         self,
@@ -307,8 +309,8 @@ class BaseTrainer:
                 }
 
             trace_start_time = timer()
-            loss = self.train_step(batch)
-            aux = {}
+            aux = self.train_step(batch)
+            loss = aux[0]
             trace_end_time = timer()
 
             def step_closure(
@@ -326,12 +328,12 @@ class BaseTrainer:
                 )
 
                 to_wandb = {}
-                for k, v in aux.items():
+                for k, v in zip(self.aux_keys, aux):
                     if isinstance(v, torch.Tensor):
                         to_wandb[k] = v.detach().item()
                     else:
                         to_wandb[k] = v
-                to_wandb["loss"] = loss
+                # to_wandb["loss"] = loss # already included in aux
                 to_wandb["lr"] = lr
                 to_wandb["epoch"] = epoch
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
@@ -382,10 +384,10 @@ class BaseTrainer:
 
 
     @torch_xla.compile(full_graph=True)
-    def train_step(self, batch: dict) -> tuple[torch.Tensor, torch.Tensor]:
+    def train_step(self, batch: dict) -> tuple[torch.Tensor, ...]:
         
-        loss = self.forward(batch)
-        
+        loss, aux = self.forward(batch)
+
         loss.backward()
         
         # self.clip_gradients()
@@ -393,10 +395,11 @@ class BaseTrainer:
         self.lr_scheduler.step()
         self.model.zero_grad()
 
-        return loss
+        self.aux_keys = ("loss",) + aux.keys()
+        return (loss,) + aux.values()
 
 
-    def forward(self, batch: dict):
+    def forward(self, batch: dict) -> tuple[torch.Tensor, TupleDict]:
         raise NotImplementedError(
             "The forward method should be implemented in the derived class."
         )

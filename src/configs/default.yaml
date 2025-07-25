@@ -10,7 +10,7 @@ defaults:
   - trainer: llm # refers to trainer/llm.yaml
 
 seed: 42
-torch_dtype: bfloat16
+torch_dtype: float32
 
 # logging and saving configuration
 debug: false

@@ -309,8 +309,8 @@ class BaseTrainer:
                 }
 
             trace_start_time = timer()
-            aux = self.train_step(batch)
-            loss = aux[0]
+            loss = self.train_step(batch)
+            aux = {}
             trace_end_time = timer()
 
             def step_closure(
@@ -328,12 +328,12 @@ class BaseTrainer:
                 )
 
                 to_wandb = {}
-                for k, v in zip(self.aux_keys, aux):
+                for k, v in aux:
                     if isinstance(v, torch.Tensor):
                         to_wandb[k] = v.detach().item()
                     else:
                         to_wandb[k] = v
-                # to_wandb["loss"] = loss # already included in aux
+                to_wandb["loss"] = loss # already included in aux
                 to_wandb["lr"] = lr
                 to_wandb["epoch"] = epoch
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
@@ -386,7 +386,7 @@ class BaseTrainer:
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, ...]:
         
-        loss, aux = self.forward(batch)
+        loss = self.forward(batch)
 
         loss.backward()
         
@@ -395,8 +395,10 @@ class BaseTrainer:
         self.lr_scheduler.step()
         self.model.zero_grad()
 
-        self.aux_keys = ("loss",) + aux.keys()
-        return (loss,) + aux.values()
+        return loss
+
+        # self.aux_keys = ("loss",) + aux.keys()
+        # return (loss,) + aux.values()
 
 
     def forward(self, batch: dict) -> tuple[torch.Tensor, TupleDict]:

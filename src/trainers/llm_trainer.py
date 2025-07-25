@@ -13,6 +13,9 @@ class LLMTrainer(BaseTrainer):
         logits, loss = self.model(
             input_ids=input_ids, labels=input_ids,
         )
+
+        return loss
+
         shift_logits, shift_labels = loss_utils.shift_tokens(logits, input_ids)
 
         loss = loss_utils.cross_entropy_loss(

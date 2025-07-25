@@ -292,7 +292,7 @@ class LlamaDecoderLayer(nn.Module):
     # torch API because there is no such feature in PyTorch. Instead, the name
     # becomes node metadata during FX graph capture.
     hidden_states = offloading.offload_name(hidden_states, "decoder_input")
-    logger.info(f"Decoder layer {self.layer_idx} input dtype: {hidden_states.dtype}")
+    logger.info(f"Hidden states dtype (before): {hidden_states.dtype}")
 
     residual = hidden_states
 
@@ -314,6 +314,7 @@ class LlamaDecoderLayer(nn.Module):
     hidden_states = self.mlp(hidden_states)
     hidden_states = residual + hidden_states
 
+    logger.info(f"Hidden states dtype (after): {hidden_states.dtype}")
     return hidden_states
 
 

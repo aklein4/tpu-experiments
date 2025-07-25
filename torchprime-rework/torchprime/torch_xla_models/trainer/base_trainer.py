@@ -52,6 +52,8 @@ from torchprime.torch_xla_models.topology import get_num_slices
 from torchprime.utils.parallelism_utils import lb_cp_enabled, reorder_sequence
 from torchprime.utils.profiling import ensure_profile_end_step
 
+from utils.import_utils import import_class
+
 logger = logging.getLogger(__name__)
 
 
@@ -175,19 +177,19 @@ class Trainer:
     num_replicas = xr.process_count()
     logger.info("Num replicas: %d", num_replicas)
 
-    if self.minibatch:
-      sampler = torch.utils.data.DistributedSampler(
-        self.train_dataset,
-        num_replicas=num_replicas,
-        rank=xr.process_index(),
-      )
-    else:
-      # Without minibatch, every process loads the global batch the same way.
-      sampler = torch.utils.data.DistributedSampler(
-        self.train_dataset,
-        num_replicas=1,
-        rank=0,
-      )
+    # if self.minibatch:
+    #   sampler = torch.utils.data.DistributedSampler(
+    #     self.train_dataset,
+    #     num_replicas=num_replicas,
+    #     rank=xr.process_index(),
+    #   )
+    # else:
+    #   # Without minibatch, every process loads the global batch the same way.
+    #   sampler = torch.utils.data.DistributedSampler(
+    #     self.train_dataset,
+    #     num_replicas=1,
+    #     rank=0,
+    #   )
 
     assert self.global_batch_size is not None
     if self.minibatch:
@@ -197,12 +199,17 @@ class Trainer:
       # Each process will load the global batch, then discard the unneeded parts.
       batch_size = self.global_batch_size
 
+    # handle the collator
+    collator_cls = import_class(self.config.data.collator_class, constants.COLLATOR_MODULE)
+    collator = collator_cls(**self.config.data.collator_kwargs)
+
     dataloader = DataLoader(
       self.train_dataset,
       # Data collator will default to DataCollatorWithPadding, so we change it.
-      collate_fn=default_data_collator,
+      collate_fn=collator,
       batch_size=batch_size,
-      sampler=sampler,
+      # sampler=sampler,
+      shuffle=False,
       drop_last=True,
     )
     loader = pl.MpDeviceLoader(
@@ -227,7 +234,7 @@ class Trainer:
     # For now we assume that we will never train for more than one epoch
     max_step = self.config.task.max_steps
     train_loader = self._get_train_dataloader()
-    steps_per_epoch = len(train_loader)
+    steps_per_epoch = self.config.task.max_steps # len(train_loader)
     train_iterator = iter(train_loader)
 
     logger.info("Starting training")

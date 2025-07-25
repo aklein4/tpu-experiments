@@ -19,6 +19,8 @@ from torchprime.torch_xla_models.model import model_utils
 from torchprime.torch_xla_models.utils.config_utils import config_vaidator
 from torchprime.utils import retry
 
+from data.datasets import get_dataset
+
 transformers.utils.check_min_version("4.39.3")
 logger = logging.getLogger(__name__)
 
@@ -66,21 +68,14 @@ def main(config: omegaconf.DictConfig):
 
   model_utils.log_parameter_breakdown(model, logger)
 
-  # Select dataset builder and trainer based on the task name.
-  dataset_fn = torchprime.data.DATASET_BUILDERS.get(
-    config.task.name, torchprime.data.make_train_dataset
+  data = get_dataset(
+    **config.data.dataset,
   )
+  logger.info(f"Dataset loaded: {config.data.dataset.name}")
 
   trainer_cls = torchprime.torch_xla_models.trainer.TRAINERS.get(
     config.task.name, torchprime.torch_xla_models.trainer.Trainer
   )
-  data = retry.retry(lambda: dataset_fn(**config.dataset, tokenizer=tokenizer))
-
-  dataset_name = getattr(config.dataset, "hf_dataset_name", None) or getattr(
-    config.dataset, "file_dataset_path", "unknown"
-  )
-  logger.info("Loaded dataset `%s`, size=%d (packed) samples", dataset_name, len(data))
-
   trainer = trainer_cls(
     model=model,
     config=config,

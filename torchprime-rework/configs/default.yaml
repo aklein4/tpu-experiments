@@ -8,6 +8,7 @@ defaults:
   - model: llama-3-8b # refers to model/llama-3-8b.yaml
   - dataset: wikitext # refers to dataset/wikitext.yaml
   - task: train # refers to task/train.yaml
+  - data: tokenized # refers to data/tokenized.yaml
 
 seed: 42
 logging_steps: 10

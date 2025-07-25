@@ -365,7 +365,7 @@ class Trainer:
 
   @torch_xla.compile(full_graph=True)
   def train_step(self, batch: dict) -> tuple[torch.Tensor, torch.Tensor]:
-    _logits, loss = self.model(input_ids=batch)
+    _logits, loss = self.model(input_ids=batch, labels=batch)
     loss.backward()
     grad_norm = self.clip_gradients()
     self.optimizer.step()

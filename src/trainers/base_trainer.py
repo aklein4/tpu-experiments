@@ -396,8 +396,8 @@ class BaseTrainer:
         self.lr_scheduler.step()
         self.model.zero_grad()
 
-        self.aux_keys = ("loss",) + aux.keys()
-        return (loss,) + aux.values()
+        self.aux_keys = ("loss",) # + aux.keys()
+        return (loss,) # + aux.values()
 
 
     def forward(self, batch: dict) -> tuple[torch.Tensor, TupleDict]:

@@ -63,7 +63,6 @@ def main(config: omegaconf.DictConfig):
     server = xp.start_server(9012)
     logger.info(f"Profiling server started: {str(server)}")
 
-
     # Set the model dtype to bfloat16, and set the default device to the XLA device.
     # This will capture the model constructor into a graph so that we can add
     # sharding annotations to the weights later, and run the constructor on the XLA device.

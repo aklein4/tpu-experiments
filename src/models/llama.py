@@ -237,17 +237,17 @@ class LlamaAttention(nn.Module):
     query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
     # apply elementwise attention bias
-    if elementwise_attention_bias is not None:
-      first_ind = (query_states.shape[-1] //2 ) - 1
-      sec_ind = -1
+    # if elementwise_attention_bias is not None:
+    #   first_ind = (query_states.shape[-1] //2 ) - 1
+    #   sec_ind = -1
 
-      query_states = query_states.clone()
-      query_states[..., first_ind] = 0.5
-      query_states[..., sec_ind] = 0.5
+    #   query_states = query_states.clone()
+    #   query_states[..., first_ind] = 0.5
+    #   query_states[..., sec_ind] = 0.5
 
-      key_states = key_states.clone()
-      key_states[..., first_ind] = elementwise_attention_bias[:, None].to(key_states.dtype) # add head axis 
-      key_states[..., sec_ind] = elementwise_attention_bias[:, None].to(key_states.dtype)
+    #   key_states = key_states.clone()
+    #   key_states[..., first_ind] = elementwise_attention_bias[:, None].to(key_states.dtype) # add head axis 
+    #   key_states[..., sec_ind] = elementwise_attention_bias[:, None].to(key_states.dtype)
 
     logger.info(f"Attention dtypes: {query_states.dtype}, {key_states.dtype}, {value_states.dtype}")
     attn_output = self.attention_block(

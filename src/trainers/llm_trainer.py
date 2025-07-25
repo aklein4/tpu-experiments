@@ -1,4 +1,4 @@
-
+import torch
 
 from trainers.base_trainer import BaseTrainer
 from utils import loss as loss_utils
@@ -23,8 +23,8 @@ class LLMTrainer(BaseTrainer):
         )
 
         aux = TupleDict()
-        aux['min_logit'] = shift_logits.min()
-        aux['max_logit'] = shift_logits.max()
+        aux['min_logit'] = torch.min(shift_logits)[0]
+        aux['max_logit'] = torch.max(shift_logits)[0]
 
         # aux['acc'] = loss + 1 # loss_utils.accuracy(shift_logits, shift_labels, pad_token_id, shifted=True)
         # aux['pcorr'] = loss * 2 # loss_utils.pcorr(shift_logits, shift_labels, pad_token_id, shifted=True)

@@ -55,7 +55,7 @@ def main(config: omegaconf.DictConfig):
     lambda: transformers.AutoTokenizer.from_pretrained(tokenizer_name)
   )
 
-  assert config.torch_dtype == "bfloat16", "Currently only bfloat16 is supported"
+  # assert config.torch_dtype == "bfloat16", "Currently only bfloat16 is supported"
   model_dtype = getattr(torch, config.torch_dtype)
 
   # Set the model dtype to bfloat16, and set the default device to the XLA device.

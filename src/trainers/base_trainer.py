@@ -46,6 +46,7 @@ from torchprime.torch_xla_models.model_rewriting.sharding_initialization import 
     setup_sharding_and_mesh,
 )
 from torchprime.utils.parallelism_utils import lb_cp_enabled, reorder_sequence
+from torchprime.utils.profiling import ensure_profile_end_step
 
 import wandb
 import huggingface_hub as hf
@@ -91,6 +92,7 @@ class BaseTrainer:
         train_dataset: Dataset | IterableDataset | None,
     ):
         self.config = config
+        ensure_profile_end_step(config)
         self.device = xm.xla_device()
         self.global_batch_size = self.config.trainer.global_batch_size
         self.train_dataset = train_dataset
@@ -353,6 +355,19 @@ class BaseTrainer:
                 run_async=True,
             )
         
+            # Start profiler trace at the configured step
+            if step == self.config.profile_start_step:
+                # Wait until device execution catches up to tracing before triggering the profile.
+                # This will interrupt training slightly on the hosts which are capturing, but by waiting
+                # after tracing for the step, the interruption will be minimal.
+                xm.wait_device_ops()
+                xp.start_trace(self.config.profile_dir)
+
+            # Stop profiler trace at the configured step
+            if step == self.config.profile_end_step:
+                xm.wait_device_ops()
+                xp.stop_trace()
+
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
 

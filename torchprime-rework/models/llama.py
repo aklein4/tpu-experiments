@@ -249,7 +249,6 @@ class LlamaAttention(nn.Module):
     #   key_states[..., first_ind] = elementwise_attention_bias[:, None].to(key_states.dtype) # add head axis 
     #   key_states[..., sec_ind] = elementwise_attention_bias[:, None].to(key_states.dtype)
 
-    logger.info(f"Attention dtypes: {query_states.dtype}, {key_states.dtype}, {value_states.dtype}")
     attn_output = self.attention_block(
       query_states, key_states, value_states, attention_mask
     )
@@ -293,7 +292,6 @@ class LlamaDecoderLayer(nn.Module):
     # torch API because there is no such feature in PyTorch. Instead, the name
     # becomes node metadata during FX graph capture.
     hidden_states = offloading.offload_name(hidden_states, "decoder_input")
-    logger.info(f"Hidden states dtype (before): {hidden_states.dtype}")
 
     residual = hidden_states
 
@@ -315,7 +313,6 @@ class LlamaDecoderLayer(nn.Module):
     hidden_states = self.mlp(hidden_states)
     hidden_states = residual + hidden_states
 
-    logger.info(f"Hidden states dtype (after): {hidden_states.dtype}")
     return hidden_states
 
 
@@ -443,10 +440,8 @@ class LlamaForCausalLM(BaseXLAModel):
   ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
     
     hidden_states = self.model(input_ids=input_ids, attention_mask=attention_mask)
-    logger.info(f"Model output dtype: {hidden_states.dtype}")
 
     logits = self.lm_head(hidden_states)
-    logger.info(f"Logits dtype: {logits.dtype}")
     logits = logits.float()
 
     logits = torch.nn.functional.log_softmax(logits, dim=-1)

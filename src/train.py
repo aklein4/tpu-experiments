@@ -74,7 +74,7 @@ def main(config: omegaconf.DictConfig):
         model = model_cls(config.model)
 
     # print model information
-    model_utils.log_parameter_breakdown(model, logger, simple=True)
+    model_utils.log_parameter_breakdown(model, logger)
     logger.info(f"Model initialized: {config.model.model_class}")
 
     # Create the dataset

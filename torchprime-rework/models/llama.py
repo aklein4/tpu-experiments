@@ -443,7 +443,7 @@ class LlamaForCausalLM(BaseXLAModel):
     logits = self.lm_head(hidden_states)
     logits = logits.float()
 
-    logits = torch.nn.functional.log_softmax(logits, dim=-1)
+    # logits = torch.nn.functional.log_softmax(logits, dim=-1)
     
     if labels is None:
       return logits, None

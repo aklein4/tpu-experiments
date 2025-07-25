@@ -235,18 +235,18 @@ class LlamaAttention(nn.Module):
     cos, sin = position_embeddings
     query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
-    # apply elementwise attention bias
-    if elementwise_attention_bias is not None:
-      first_ind = (query_states.shape[-1] //2 ) - 1
-      sec_ind = -1
+    # # apply elementwise attention bias
+    # if elementwise_attention_bias is not None:
+    #   first_ind = (query_states.shape[-1] //2 ) - 1
+    #   sec_ind = -1
 
-      query_states = query_states.clone()
-      query_states[..., first_ind] = 0.5
-      query_states[..., sec_ind] = 0.5
+    #   query_states = query_states.clone()
+    #   query_states[..., first_ind] = 0.5
+    #   query_states[..., sec_ind] = 0.5
 
-      key_states = key_states.clone()
-      key_states[..., first_ind] = elementwise_attention_bias[:, None] # add head axis 
-      key_states[..., sec_ind] = elementwise_attention_bias[:, None]
+    #   key_states = key_states.clone()
+    #   key_states[..., first_ind] = elementwise_attention_bias[:, None] # add head axis 
+    #   key_states[..., sec_ind] = elementwise_attention_bias[:, None]
 
     attn_output = self.attention_block(
       query_states, key_states, value_states, attention_mask
@@ -418,16 +418,16 @@ class LlamaForCausalLM(BaseXLAModel):
     self.apply(self._init_weights)
 
   
-    def _init_weights(self, module: nn.Module):
-      logger.info(f"Initializing weights for {module.__class__.__name__}")
+    # def _init_weights(self, module: nn.Module):
+    #   logger.info(f"Initializing weights for {module.__class__.__name__}")
 
-      if isinstance(module, nn.Linear):
-        module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)
-        if module.bias is not None:
-          module.bias.data.zero_()
+    #   if isinstance(module, nn.Linear):
+    #     module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)
+    #     if module.bias is not None:
+    #       module.bias.data.zero_()
 
-      elif isinstance(module, nn.Embedding):
-        module.weight.data.normal_(mean=0.0, std=1/module.embedding_dim**0.5)
+    #   elif isinstance(module, nn.Embedding):
+    #     module.weight.data.normal_(mean=0.0, std=1/module.embedding_dim**0.5)
 
 
   @xp.trace_me("LlamaForCausalLM")

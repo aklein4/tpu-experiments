@@ -7,13 +7,10 @@ class TupleDict:
     Only supports adding new items, not modifying existing ones.
     """
 
-    def __init__(self, **kwargs):
-
+    def __init__(self):
         self._keys = []
         self._values = []
 
-        for k, v in kwargs.items():
-            self[k] = v
     
 
     def __setitem__(self, key, value):

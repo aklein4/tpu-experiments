@@ -217,7 +217,6 @@ class LlamaAttention(nn.Module):
   ) -> torch.FloatTensor:
     bsz, q_len, _ = hidden_states.shape
 
-    print(f"QKV dtype: {self.qkv_proj.weight.data.dtype}")
     qkv_states = self.qkv_proj(hidden_states)
     query_states, key_states, value_states = torch.split(
       qkv_states, self.qkv_splits, dim=-1

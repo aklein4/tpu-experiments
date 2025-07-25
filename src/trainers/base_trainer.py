@@ -386,9 +386,10 @@ class BaseTrainer:
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, ...]:
         
-        loss, aux = self.forward(batch)
+        with torch.autocast(self.device, dtype=torch.bfloat16):
+            loss, aux = self.forward(batch)
+        
         assert "loss" not in aux.keys()
-
         loss.backward()
         
         # self.clip_gradients()

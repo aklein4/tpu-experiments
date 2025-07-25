@@ -23,8 +23,9 @@ class LLMTrainer(BaseTrainer):
         )
 
         aux = TupleDict()
-        aux['min_logit'] = torch.min(shift_logits)
-        aux['max_logit'] = torch.max(shift_logits)
+        aux['pad_percent'] = (input_ids == pad_token_id).float().mean()
+        # aux['min_logit'] = torch.min(shift_logits)
+        # aux['max_logit'] = torch.max(shift_logits)
 
         # aux['acc'] = loss + 1 # loss_utils.accuracy(shift_logits, shift_labels, pad_token_id, shifted=True)
         # aux['pcorr'] = loss * 2 # loss_utils.pcorr(shift_logits, shift_labels, pad_token_id, shifted=True)

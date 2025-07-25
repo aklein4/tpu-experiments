@@ -417,6 +417,18 @@ class LlamaForCausalLM(BaseXLAModel):
     # Initialize weights and apply final processing
     self.apply(self._init_weights)
 
+  
+    def _init_weights(self, module: nn.Module):
+      logger.info(f"Initializing weights for {module.__class__.__name__}")
+
+      if isinstance(module, nn.Linear):
+        module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)
+        if module.bias is not None:
+          module.bias.data.zero_()
+
+      elif isinstance(module, nn.Embedding):
+        module.weight.data.normal_(mean=0.0, std=1/module.embedding_dim**0.5)
+
 
   @xp.trace_me("LlamaForCausalLM")
   def forward(

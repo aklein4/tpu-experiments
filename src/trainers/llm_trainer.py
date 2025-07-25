@@ -22,6 +22,8 @@ class LLMTrainer(BaseTrainer):
             shifted=True
         )
 
+        return loss
+
         aux = TupleDict()
         aux['pad_percent'] = (input_ids == pad_token_id).float().mean()
         # aux['min_logit'] = torch.min(shift_logits)

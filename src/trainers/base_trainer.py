@@ -20,6 +20,7 @@ import torch
 import torch.nn.utils as nn_utils
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.debug.profiler as xp
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.runtime as xr
 
@@ -54,7 +55,7 @@ from utils.import_utils import import_class
 from utils import constants
 
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 def get_model_dtype(module: nn.Module) -> torch.dtype:
@@ -113,7 +114,7 @@ class BaseTrainer:
         self.model = model
 
         # create optimizer and learning rate scheduler
-        self.optimizer = self._create_optimizer(config, model.parameters())
+        self.optimizer = type(self)._create_optimizer(config, model.parameters())
         self.lr_scheduler = get_scheduler(
             name=self.config.trainer.lr_scheduler.type,
             optimizer=self.optimizer,
@@ -277,8 +278,8 @@ class BaseTrainer:
         train_iterator = iter(train_loader)
 
         logger.info("Starting training")
-        logger.info("        Max step: %d", max_step)
-        logger.info("        Global batch size: %d", self.global_batch_size)
+        logger.info("    Max step: %d", max_step)
+        logger.info("    Global batch size: %d", self.global_batch_size)
 
         epoch = 0
         for step in range(max_step):
@@ -308,10 +309,9 @@ class BaseTrainer:
             trace_end_time = timer()
 
             def step_closure(
-                epoch, step, loss, aux, trace_start_time, trace_end_time, lr_scheduler
+                epoch, step, loss, aux, trace_start_time, trace_end_time, lr
             ):
                 loss = loss.detach().item()
-                lr = lr_scheduler.get_last_lr()[0]
 
                 logger.info(
                     "Epoch: %.4f, step: %d, loss: %.4f, lr: %.2e, trace time: %.2f ms",
@@ -334,10 +334,7 @@ class BaseTrainer:
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
-                    try:
-                        wandb.log(to_wandb)
-                    except Exception as e:
-                        logger.info(f"Failed to log to wandb:\n{e}")
+                    wandb.log(to_wandb)
 
                 # if math.isnan(loss):
                 #     raise ValueError(f"Loss is NaN at step {step}")
@@ -351,22 +348,13 @@ class BaseTrainer:
                     aux,
                     trace_start_time,
                     trace_end_time,
-                    self.lr_scheduler,
+                    self.lr_scheduler.get_last_lr()[0],
                 ),
-                run_async=False,
+                run_async=True,
             )
         
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
-            
-            # xm.mark_step()
-            # xm.wait_device_ops()
-            # xm.rendezvous(f"after_step {step}")
-            # logger.info(f"Process {constants.PROCESS_INDEX()} finished mark_step {step}")
-            # xm.wait_device_ops()
-            # logger.info(f"Process {constants.PROCESS_INDEX()} finished waiting for device ops after mark_step {step}")
-            # xm.rendezvous(f"after_step {step}")
-            # logger.info(f"Process {constants.PROCESS_INDEX()} FINISHED step {step}")
 
         xm.wait_device_ops()
         logger.info("Finished training run")

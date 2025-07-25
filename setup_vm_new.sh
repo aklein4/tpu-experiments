@@ -21,7 +21,7 @@ pip install torch==2.9.0.dev20250709+cpu --index-url https://download.pytorch.or
 
 # install torch_xla for TPU VM
 # Edit `cp310-cp310` to fit your desired Python version as needed
-pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev20250709-cp310-cp310-linux_x86_64.whl -f https://storage.googleapis.com/libtpu-wheels/index.html'
+pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev20250709-cp310-cp310-linux_x86_64.whl' -f https://storage.googleapis.com/libtpu-wheels/index.html
 
 # update path(?)
 export PATH="/home/$USER/.local/bin:$PATH"

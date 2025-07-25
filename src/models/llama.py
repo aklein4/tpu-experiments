@@ -34,7 +34,7 @@ from torchprime.torch_xla_models.loss import cross_entropy_loss
 from models.xla import BaseXLAModel
 
 
-logger = logging.get_logger()
+logger = logging.get_logger(__name__)
 
 
 class LlamaRMSNorm(nn.Module):
@@ -236,16 +236,17 @@ class LlamaAttention(nn.Module):
     query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
     # apply elementwise attention bias
-    first_ind = (query_states.shape[-1] //2 ) - 1
-    sec_ind = -1
+    if elementwise_attention_bias is not None:
+      first_ind = (query_states.shape[-1] //2 ) - 1
+      sec_ind = -1
 
-    query_states = query_states.clone()
-    query_states[..., first_ind] = 0.5
-    query_states[..., sec_ind] = 0.5
+      query_states = query_states.clone()
+      query_states[..., first_ind] = 0.5
+      query_states[..., sec_ind] = 0.5
 
-    key_states = key_states.clone()
-    key_states[..., first_ind] = elementwise_attention_bias[:, None] # add head axis 
-    key_states[..., sec_ind] = elementwise_attention_bias[:, None]
+      key_states = key_states.clone()
+      key_states[..., first_ind] = elementwise_attention_bias[:, None] # add head axis 
+      key_states[..., sec_ind] = elementwise_attention_bias[:, None]
 
     attn_output = self.attention_block(
       query_states, key_states, value_states, attention_mask
@@ -428,6 +429,8 @@ class LlamaForCausalLM(BaseXLAModel):
     hidden_states = self.model(input_ids=input_ids, attention_mask=attention_mask)
     
     logits = self.lm_head(hidden_states)
+    logits = logits.float()
+
     logits = torch.nn.functional.log_softmax(logits, dim=-1)
     
     if labels is None:

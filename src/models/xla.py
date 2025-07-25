@@ -22,7 +22,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from torchprime.torch_xla_models.model import model_utils
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class BaseXLAModel(nn.Module):

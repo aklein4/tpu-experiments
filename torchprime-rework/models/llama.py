@@ -446,7 +446,7 @@ class LlamaForCausalLM(BaseXLAModel):
     logits = torch.nn.functional.log_softmax(
       logits,
       dim=-1,
-      dtype=self.config.torch_dtype,
+      dtype=logits.dtype,
     )
     
     if labels is None:

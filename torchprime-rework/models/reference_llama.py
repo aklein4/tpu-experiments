@@ -30,9 +30,7 @@ from torchprime.rope.rope import RopeScaling, llama3_rope_frequencies
 from torchprime.torch_xla_models import offloading
 from torchprime.torch_xla_models.attention import AttentionModule
 from torchprime.torch_xla_models.loss import cross_entropy_loss
-
-from models.xla import BaseXLAModel
-
+from torchprime.torch_xla_models.model.base_causal_lm import BaseCausalLM
 
 logger = logging.get_logger(__name__)
 
@@ -130,21 +128,14 @@ class LlamaMLP(nn.Module):
     self.config = config
     self.hidden_size = config.hidden_size
     self.intermediate_size = config.intermediate_size
-    
-    self.splits = [self.intermediate_size, self.intermediate_size]
-    self.gate_up_proj = nn.Linear(
-      self.hidden_size, sum(self.splits), bias=False
-    )
-    
+    self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+    self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
     self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
     self.act_fn = ACT2FN[config.hidden_act]
 
   @xp.trace_me("LlamaMLP")
   def forward(self, x):
-    gate_up = self.gate_up_proj(x)
-    gate, up = torch.split(gate_up, self.splits, dim=-1)
-
-    down_proj = self.down_proj(self.act_fn(gate) * up)
+    down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
     return down_proj
 
 
@@ -192,18 +183,23 @@ class LlamaAttention(nn.Module):
         f" and `num_heads`: {self.num_heads})."
       )
 
-    self.qkv_splits = [
-      self.num_heads * self.head_dim, 
-      self.num_key_value_heads * self.head_dim,
-      self.num_key_value_heads * self.head_dim,
-    ]
-    self.qkv_proj = nn.Linear(
+    self.q_proj = nn.Linear(
       self.hidden_size,
-      sum(self.qkv_splits),
+      self.num_heads * self.head_dim,
+      bias=config.attention_bias,
+    )
+    self.k_proj = nn.Linear(
+      self.hidden_size,
+      self.num_key_value_heads * self.head_dim,
+      bias=config.attention_bias,
+    )
+    self.v_proj = nn.Linear(
+      self.hidden_size,
+      self.num_key_value_heads * self.head_dim,
       bias=config.attention_bias,
     )
     self.o_proj = nn.Linear(
-      self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias
+      self.hidden_size, self.hidden_size, bias=config.attention_bias
     )
 
   @xp.trace_me("LlamaAttention")
@@ -213,14 +209,12 @@ class LlamaAttention(nn.Module):
     position_embeddings: tuple[torch.Tensor, torch.Tensor],
     attention_mask: torch.Tensor | None = None,
     position_ids: torch.LongTensor | None = None,
-    elementwise_attention_bias: torch.Tensor | None = None,
   ) -> torch.FloatTensor:
-    bsz, q_len, _ = hidden_states.shape
+    bsz, q_len, _ = hidden_states.size()
 
-    qkv_states = self.qkv_proj(hidden_states)
-    query_states, key_states, value_states = torch.split(
-      qkv_states, self.qkv_splits, dim=-1
-    )
+    query_states = self.q_proj(hidden_states)
+    key_states = self.k_proj(hidden_states)
+    value_states = self.v_proj(hidden_states)
 
     query_states = query_states.view(
       bsz, q_len, self.num_heads, self.head_dim
@@ -234,19 +228,6 @@ class LlamaAttention(nn.Module):
 
     cos, sin = position_embeddings
     query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
-
-    # apply elementwise attention bias
-    # if elementwise_attention_bias is not None:
-    #   first_ind = (query_states.shape[-1] //2 ) - 1
-    #   sec_ind = -1
-
-    #   query_states = query_states.clone()
-    #   query_states[..., first_ind] = 0.5
-    #   query_states[..., sec_ind] = 0.5
-
-    #   key_states = key_states.clone()
-    #   key_states[..., first_ind] = elementwise_attention_bias[:, None].to(key_states.dtype) # add head axis 
-    #   key_states[..., sec_ind] = elementwise_attention_bias[:, None].to(key_states.dtype)
 
     attn_output = self.attention_block(
       query_states, key_states, value_states, attention_mask
@@ -276,8 +257,8 @@ class LlamaDecoderLayer(nn.Module):
     hidden_states: torch.Tensor,
     attention_mask: torch.Tensor | None = None,
     position_ids: torch.Tensor | None = None,
-    position_embeddings: tuple[torch.Tensor, torch.Tensor] | None = None,  # necessary, but kept here for BC
-    elementwise_attention_bias: torch.Tensor | None = None,
+    position_embeddings: tuple[torch.Tensor, torch.Tensor]
+    | None = None,  # necessary, but kept here for BC
   ) -> torch.Tensor:
     """
     Args:
@@ -302,7 +283,6 @@ class LlamaDecoderLayer(nn.Module):
       attention_mask=attention_mask,
       position_ids=position_ids,
       position_embeddings=position_embeddings,
-      elementwise_attention_bias=elementwise_attention_bias,
     )
     hidden_states = residual + hidden_states
 
@@ -347,34 +327,22 @@ class LlamaModel(nn.Module):
       head_dim=head_dim, rope_theta=config.rope_theta, scaling=rope_scaling
     )
 
-
   @xp.trace_me("LlamaModel")
   def forward(
     self,
-    input_ids: torch.LongTensor | None = None,
-    input_embeds: torch.FloatTensor | None = None,
+    input_ids: torch.LongTensor,
     attention_mask: torch.FloatTensor | None = None,
-    position_ids: torch.LongTensor | None = None,
-    elementwise_attention_bias: torch.LongTensor | None = None,
   ) -> torch.Tensor:
-    assert (input_ids is not None) ^ (input_embeds is not None), (
-      "You have to specify either input_ids or input_embeds, but not both."
-    )
-    
     # convert input ids to embeddings
-    if input_embeds is None:
-      inputs_embeds = self.embed_tokens(input_ids)
+    inputs_embeds = self.embed_tokens(input_ids)
 
     seq_length = inputs_embeds.size(1)
 
     # TODO(https://github.com/pytorch/xla/issues/8783): Pass position_ids as `long()`
     # when `scan` can take non-differentiable inputs.
-    if position_ids is None:
-      position_ids = (
-        torch.arange(seq_length, device=inputs_embeds.device).unsqueeze(0).float()
-      )
-    if elementwise_attention_bias is None:
-      elementwise_attention_bias = torch.zeros_like(position_ids)
+    position_ids = (
+      torch.arange(seq_length, device=inputs_embeds.device).unsqueeze(0).float()
+    )
 
     # Create a causal attention mask
     causal_mask = torch.triu(
@@ -397,38 +365,22 @@ class LlamaModel(nn.Module):
       attention_mask=causal_mask,
       position_ids=position_ids,
       position_embeddings=position_embeddings,
-      elementwise_attention_bias=elementwise_attention_bias,
     )
 
     hidden_states = self.norm(hidden_states)
     return hidden_states
 
 
-class LlamaForCausalLM(BaseXLAModel):
+class LlamaForCausalLM(BaseCausalLM):
   def __init__(self, config):
     super().__init__()
-
     self.config = config
     self.model = LlamaModel(config)
-
     self.vocab_size = config.vocab_size
     self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
     # Initialize weights and apply final processing
     self.apply(self._init_weights)
-
-  
-    # def _init_weights(self, module: nn.Module):
-    #   logger.info(f"Initializing weights for {module.__class__.__name__}")
-
-    #   if isinstance(module, nn.Linear):
-    #     module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)
-    #     if module.bias is not None:
-    #       module.bias.data.zero_()
-
-    #   elif isinstance(module, nn.Embedding):
-    #     module.weight.data.normal_(mean=0.0, std=1/module.embedding_dim**0.5)
-
 
   @xp.trace_me("LlamaForCausalLM")
   def forward(
@@ -437,18 +389,10 @@ class LlamaForCausalLM(BaseXLAModel):
     labels: torch.LongTensor | None = None,
     attention_mask: torch.FloatTensor | None = None,
   ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
-    
     hidden_states = self.model(input_ids=input_ids, attention_mask=attention_mask)
-
     logits = self.lm_head(hidden_states)
     logits = logits.float()
-
-    logits = torch.nn.functional.log_softmax(logits, dim=-1)
-    
     if labels is None:
       return logits, None
-    
-    loss = cross_entropy_loss(logits, labels=labels, vocab_size=self.config.vocab_size, ignore_index=self.config.pad_token_id)
-    
+    loss = cross_entropy_loss(logits, labels=labels, vocab_size=self.config.vocab_size)
     return logits, loss
-  

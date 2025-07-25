@@ -361,6 +361,11 @@ class BaseTrainer:
                 # This will interrupt training slightly on the hosts which are capturing, but by waiting
                 # after tracing for the step, the interruption will be minimal.
                 xm.wait_device_ops()
+
+                if os.path.exists(self.config.profile_dir):
+                    shutil.rmtree(self.config.profile_dir)
+                os.makedirs(self.config.profile_dir)
+                
                 xp.start_trace(self.config.profile_dir)
 
             # Stop profiler trace at the configured step

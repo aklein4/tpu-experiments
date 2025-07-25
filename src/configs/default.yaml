@@ -28,7 +28,7 @@ profile_end_step: null
 
 # The directory where profiling data will be stored. This might be overwritten 
 # when using tp run to launch the run using XPK
-profile_dir: profile
+profile_dir: ../profile
 
 
 # The virtual device mesh shape to use within a TPU slice. This is also called

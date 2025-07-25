@@ -10,10 +10,9 @@ class LLMTrainer(BaseTrainer):
         pad_token_id = self.model.config.pad_token_id
         v_size = self.model.config.vocab_size
 
-        _logits, loss = self.model(
+        logits, loss = self.model(
             input_ids=input_ids, labels=input_ids,
         )
-        return loss, {}
 
         shift_logits, shift_labels = loss_utils.shift_tokens(logits, input_ids)
 

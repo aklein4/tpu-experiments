@@ -23,8 +23,8 @@ class LLMTrainer(BaseTrainer):
         )
 
         aux = TupleDict()
-        aux['acc'] = loss_utils.accuracy(shift_logits, shift_labels, pad_token_id, shifted=True)
-        aux['pcorr'] = loss_utils.pcorr(shift_logits, shift_labels, pad_token_id, shifted=True)
+        aux['acc'] = loss + 1 # loss_utils.accuracy(shift_logits, shift_labels, pad_token_id, shifted=True)
+        aux['pcorr'] = loss * 2 # loss_utils.pcorr(shift_logits, shift_labels, pad_token_id, shifted=True)
 
         return loss, aux
     

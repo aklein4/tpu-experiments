@@ -10,11 +10,9 @@ class LLMTrainer(BaseTrainer):
         pad_token_id = self.model.config.pad_token_id
         v_size = self.model.config.vocab_size
 
-        logits, loss = self.model(
-            input_ids=input_ids, labels=input_ids,
+        logits, _ = self.model(
+            input_ids=input_ids
         )
-
-        return loss
 
         shift_logits, shift_labels = loss_utils.shift_tokens(logits, input_ids)
 
@@ -24,10 +22,9 @@ class LLMTrainer(BaseTrainer):
             shifted=True
         )
 
-        aux = TupleDict(
-            acc = loss_utils.accuracy(shift_logits, shift_labels, pad_token_id, shifted=True),
-            pcorr = loss_utils.pcorr(shift_logits, shift_labels, pad_token_id, shifted=True)
-        )
+        aux = TupleDict()
+        aux['acc'] = loss_utils.accuracy(shift_logits, shift_labels, pad_token_id, shifted=True),
+        aux['pcorr'] = loss_utils.pcorr(shift_logits, shift_labels, pad_token_id, shifted=True)
 
         return loss, aux
     

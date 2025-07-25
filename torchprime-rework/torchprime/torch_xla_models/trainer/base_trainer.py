@@ -52,6 +52,7 @@ from torchprime.torch_xla_models.topology import get_num_slices
 from torchprime.utils.parallelism_utils import lb_cp_enabled, reorder_sequence
 from torchprime.utils.profiling import ensure_profile_end_step
 
+from utils import constants
 from utils.import_utils import import_class
 
 logger = logging.getLogger(__name__)

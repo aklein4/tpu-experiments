@@ -307,7 +307,8 @@ class BaseTrainer:
                 }
 
             trace_start_time = timer()
-            loss, aux = self.train_step(batch)
+            loss = self.train_step(batch)
+            aux = {}
             trace_end_time = timer()
 
             def step_closure(
@@ -355,23 +356,23 @@ class BaseTrainer:
                 run_async=True,
             )
         
-            # Start profiler trace at the configured step
-            if step == self.config.profile_start_step:
-                # Wait until device execution catches up to tracing before triggering the profile.
-                # This will interrupt training slightly on the hosts which are capturing, but by waiting
-                # after tracing for the step, the interruption will be minimal.
-                xm.wait_device_ops()
+            # # Start profiler trace at the configured step
+            # if step == self.config.profile_start_step:
+            #     # Wait until device execution catches up to tracing before triggering the profile.
+            #     # This will interrupt training slightly on the hosts which are capturing, but by waiting
+            #     # after tracing for the step, the interruption will be minimal.
+            #     xm.wait_device_ops()
 
-                if os.path.exists(self.config.profile_dir):
-                    shutil.rmtree(self.config.profile_dir)
-                os.makedirs(self.config.profile_dir)
-                
-                xp.start_trace(self.config.profile_dir)
+            #     if os.path.exists(self.config.profile_dir):
+            #         shutil.rmtree(self.config.profile_dir)
+            #     os.makedirs(self.config.profile_dir)
 
-            # Stop profiler trace at the configured step
-            if step == self.config.profile_end_step:
-                xm.wait_device_ops()
-                xp.stop_trace()
+            #     xp.start_trace(self.config.profile_dir)
+
+            # # Stop profiler trace at the configured step
+            # if step == self.config.profile_end_step:
+            #     xm.wait_device_ops()
+            #     xp.stop_trace()
 
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
@@ -383,7 +384,7 @@ class BaseTrainer:
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, torch.Tensor]:
         
-        loss, aux = self.forward(batch)
+        loss = self.forward(batch)
         
         loss.backward()
         
@@ -392,7 +393,7 @@ class BaseTrainer:
         self.lr_scheduler.step()
         self.model.zero_grad()
 
-        return loss, aux
+        return loss
 
 
     def forward(self, batch: dict):

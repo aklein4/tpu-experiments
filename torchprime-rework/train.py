@@ -20,6 +20,8 @@ from torchprime.torch_xla_models.utils.config_utils import config_vaidator
 from torchprime.utils import retry
 
 from data.datasets import get_dataset
+from utils import constants
+from utils.import_utils import import_class
 
 transformers.utils.check_min_version("4.39.3")
 logger = logging.getLogger(__name__)
@@ -57,14 +59,14 @@ def main(config: omegaconf.DictConfig):
     lambda: transformers.AutoTokenizer.from_pretrained(tokenizer_name)
   )
 
-  # assert config.torch_dtype == "bfloat16", "Currently only bfloat16 is supported"
-  model_dtype = getattr(torch, config.torch_dtype)
-
   # Set the model dtype to bfloat16, and set the default device to the XLA device.
   # This will capture the model constructor into a graph so that we can add
   # sharding annotations to the weights later, and run the constructor on the XLA device.
+  # assert config.torch_dtype == "bfloat16", "Currently only bfloat16 is supported"
+  model_dtype = getattr(torch, config.torch_dtype)
   with model_utils.set_default_dtype(model_dtype), torch_xla.device():
-    model = model_utils.initialize_model_class(config.model)
+      model_cls = import_class(config.model.model_class, constants.MODEL_MODULE)
+      model = model_cls(config.model)
 
   model_utils.log_parameter_breakdown(model, logger)
 

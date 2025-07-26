@@ -20,7 +20,6 @@ import torch
 import torch.nn.utils as nn_utils
 import torch_xla
 import torch_xla.core.xla_model as xm
-import torch_xla.debug.profiler as xp
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.runtime as xr
 
@@ -46,11 +45,11 @@ from torchprime.torch_xla_models.model_rewriting.sharding_initialization import 
     setup_sharding_and_mesh,
 )
 from torchprime.utils.parallelism_utils import lb_cp_enabled, reorder_sequence
-from torchprime.utils.profiling import ensure_profile_end_step
 
 import wandb
 import huggingface_hub as hf
 
+from optimizers.adamw import AdamW
 from models.xla import BaseXLAModel
 from utils.import_utils import import_class
 from utils import constants
@@ -58,13 +57,6 @@ from utils.tuple_dict import TupleDict
 
 
 logger = logging.getLogger(__name__)
-
-
-def get_model_dtype(module: nn.Module) -> torch.dtype:
-    dtypes = {param.dtype for param in module.parameters()}
-    if len(dtypes) != 1:
-        raise ValueError(f"Inconsistent dtypes found: {dtypes}")
-    return dtypes.pop()
 
 
 _ADAFACTOR = "adafactor"
@@ -94,7 +86,6 @@ class BaseTrainer:
         train_dataset: Dataset | IterableDataset | None,
     ):
         self.config = config
-        ensure_profile_end_step(config)
         self.device = xm.xla_device()
         self.global_batch_size = self.config.trainer.global_batch_size
         self.train_dataset = train_dataset
@@ -158,7 +149,7 @@ class BaseTrainer:
             )
 
         if config.trainer.optimizer.type == _ADAMW:
-            optimizer = torch.optim.AdamW(
+            optimizer = AdamW(
                 params=model_parameters,
                 lr=config.trainer.optimizer.learning_rate,
                 weight_decay=config.trainer.optimizer.weight_decay,

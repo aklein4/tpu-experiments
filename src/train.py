@@ -11,7 +11,6 @@ import hydra
 import omegaconf
 import torch
 import torch_xla
-import torch_xla.debug.profiler as xp
 import torch_xla.runtime as xr
 import transformers
 
@@ -58,10 +57,6 @@ def main(config: omegaconf.DictConfig):
     # set training seeds
     transformers.set_seed(config.seed)
     torch_xla.manual_seed(config.seed)
-
-    # start the profiling server
-    server = xp.start_server(9012)
-    logger.info(f"Profiling server started: {str(server)}")
 
     # Set the model dtype to bfloat16, and set the default device to the XLA device.
     # This will capture the model constructor into a graph so that we can add

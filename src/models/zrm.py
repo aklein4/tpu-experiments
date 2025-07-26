@@ -212,7 +212,7 @@ class ZRMModel(BaseXLAModel):
 
         # get the real alpha value
         alpha = F.softplus(self.log_alpha.mean()) / np.log(2.0)
-        alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
+        # alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
         # alpha = np.sqrt(np.log(self.vocab_size) / self.z_size)
 
         # get reusable components
@@ -254,7 +254,7 @@ class ZRMModel(BaseXLAModel):
             input_tokens=input_tokens,
             input_mask=input_mask,
             input_bias=input_bias,
-            z=noise
+            z=(encoder_mu + noise)
         )
         generator_mu = generator_mu_raw * alpha
 
@@ -381,10 +381,11 @@ class ZRMModel(BaseXLAModel):
             input_tokens
         )
 
-        z_states = expand_to_batch(self.generator_z_tokens, input_tokens)
+        # z_states = expand_to_batch(self.generator_z_tokens, input_tokens)
         # z_states = z_states.contiguous().clone()
         # z_states[:, 1:] += self.generator_z_proj_in(z[:, :-1]).contiguous()
         # z_states = self.generator_z_proj_in(z)
+        z_states = self.generator_z_proj_in(torch.randn_like(z))
 
         generator_states = torch.cat(
             [

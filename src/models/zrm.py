@@ -374,7 +374,6 @@ class ZRMModel(BaseXLAModel):
         input_bias: torch.FloatTensor,
         z: torch.FloatTensor,
     ):
-        return z
 
         # construct the generator input
         input_states = (
@@ -399,6 +398,10 @@ class ZRMModel(BaseXLAModel):
                 z_states,
             ],
             dim=-2
+        )
+
+        return self.generator_mu_proj_out(
+            generator_states[:, -self.z_length:]
         )
 
         # create the position ids

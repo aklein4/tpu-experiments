@@ -2,20 +2,50 @@
 embed_tokens.weight: [fsdp, null]
 lm_head.weight: [fsdp, null]
 
-'*.layers.*.self_attn.o_proj.weight': [fsdp, null]
-'*.layers.*.mlp.down_proj.weight': [null, fsdp]
+encoder.layers.*.self_attn.o_proj.weight: [fsdp, null]
+encoder.layers.*.mlp.down_proj.weight: [null, fsdp]
 
-'*.layers.*.input_layernorm.weight': [fsdp]
-'*.layers.*.post_attention_layernorm.weight': [fsdp]
-'*.norm.weight': [fsdp]
+encoder.layers.*.input_layernorm.weight: [fsdp]
+encoder.layers.*.post_attention_layernorm.weight: [fsdp]
+encoder.norm.weight: [fsdp]
 
-'*.layers.*.self_attn.qkv_proj.base_linear.weight': [fsdp, null]
-'*.layers.*.self_attn.qkv_proj.lora_down.weight': [null, fsdp]
-'*.layers.*.self_attn.qkv_proj.lora_up.weight': [fsdp, null]
+encoder.layers.*.self_attn.qkv_proj.base_linear.weight: [fsdp, null]
+encoder.layers.*.self_attn.qkv_proj.lora_down.weight: [null, fsdp]
+encoder.layers.*.self_attn.qkv_proj.lora_up.weight: [fsdp, null]
 
-'*.layers.*.mlp.gate_up_proj.base_linear.weight': [fsdp, null]
-'*.layers.*.mlp.gate_up_proj.lora_down.weight': [null, fsdp]
-'*.layers.*.mlp.gate_up_proj.lora_up.weight': [fsdp, null]
+encoder.layers.*.mlp.gate_up_proj.base_linear.weight: [fsdp, null]
+encoder.layers.*.mlp.gate_up_proj.lora_down.weight: [null, fsdp]
+encoder.layers.*.mlp.gate_up_proj.lora_up.weight: [fsdp, null]
+
+generator.layers.*.self_attn.o_proj.weight: [fsdp, null]
+generator.layers.*.mlp.down_proj.weight: [null, fsdp]
+
+generator.layers.*.input_layernorm.weight: [fsdp]
+generator.layers.*.post_attention_layernorm.weight: [fsdp]
+generator.norm.weight: [fsdp]
+
+generator.layers.*.self_attn.qkv_proj.base_linear.weight: [fsdp, null]
+generator.layers.*.self_attn.qkv_proj.lora_down.weight: [null, fsdp]
+generator.layers.*.self_attn.qkv_proj.lora_up.weight: [fsdp, null]
+
+generator.layers.*.mlp.gate_up_proj.base_linear.weight: [fsdp, null]
+generator.layers.*.mlp.gate_up_proj.lora_down.weight: [null, fsdp]
+generator.layers.*.mlp.gate_up_proj.lora_up.weight: [fsdp, null]
+
+decoder.layers.*.self_attn.o_proj.weight: [fsdp, null]
+decoder.layers.*.mlp.down_proj.weight: [null, fsdp]
+
+decoder.layers.*.input_layernorm.weight: [fsdp]
+decoder.layers.*.post_attention_layernorm.weight: [fsdp]
+decoder.norm.weight: [fsdp]
+
+decoder.layers.*.self_attn.qkv_proj.base_linear.weight: [fsdp, null]
+decoder.layers.*.self_attn.qkv_proj.lora_down.weight: [null, fsdp]
+decoder.layers.*.self_attn.qkv_proj.lora_up.weight: [fsdp, null]
+
+decoder.layers.*.mlp.gate_up_proj.base_linear.weight: [fsdp, null]
+decoder.layers.*.mlp.gate_up_proj.lora_down.weight: [null, fsdp]
+decoder.layers.*.mlp.gate_up_proj.lora_up.weight: [fsdp, null]
 
 encoder_input_emb: [null, fsdp]
 encoder_sep_token: [fsdp]
@@ -41,5 +71,7 @@ decoder_z_proj_in.weight: [fsdp, null]
 log_alpha: [null]
 
 # Activations
-'*.layers.*': [[data, fsdp], null, null]
+encoder.layers.*: [[data, fsdp], null, null]
+generator.layers.*: [[data, fsdp], null, null]
+decoder.layers.*: [[data, fsdp], null, null]
 lm_head: [[data, fsdp], null, null]

@@ -4,7 +4,7 @@ defaults:
   - remat: llama-scan  # refers to remat/llama-scan.yaml
 
 
-model_id: llama-3-2B
+model_id: llama-3-2b
 model_class: llama.LlamaForCausalLM  # Used to import the model from this class
 pretrained_model: null
 

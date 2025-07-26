@@ -1,4 +1,6 @@
 # This is for basic training loop, i.e., forward/backward pass without any special task logic.
+trainer_class: base_trainer.Trainer
+
 name: train
 global_batch_size: 256
 max_steps: 1000

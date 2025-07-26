@@ -38,3 +38,5 @@
     - [ ] acc threshold for grad(LM loss, enc_mu)? (save grad scale in previous wtep closure)
  - [ ] Train ZLM
 
+### Issues
+ - [ ] Why are there NaNs?

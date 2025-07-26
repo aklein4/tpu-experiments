@@ -456,7 +456,12 @@ class LlamaForCausalLM(BaseXLAModel):
     if labels is None:
       return logits, None
     
-    loss = cross_entropy_loss(logits, labels=labels, vocab_size=self.config.vocab_size)
+    loss = cross_entropy_loss(
+      logits,
+      labels=labels,
+      vocab_size=self.config.vocab_size,
+      pad_token_id=self.config.pad_token_id,
+    )
     
     return logits, loss
   

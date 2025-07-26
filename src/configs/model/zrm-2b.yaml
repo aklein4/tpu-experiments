@@ -41,3 +41,5 @@ z_length: 384
 z_size: 128
 
 lora_rank: 128
+
+pad_bias: -10.0

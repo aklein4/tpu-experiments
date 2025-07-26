@@ -36,7 +36,7 @@ attention_kernel: flash_attention
 
 input_length: 512
 output_length: 512
-z_length: 384
+z_length: 512
 
 z_size: 128
 

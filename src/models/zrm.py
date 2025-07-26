@@ -212,6 +212,7 @@ class ZRMModel(BaseXLAModel):
 
         # get the real alpha value
         alpha = F.softplus(self.log_alpha) / np.log(2.0)
+        alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
 
         # get reusable components
         input_tokens = self.embed_tokens(input_ids)

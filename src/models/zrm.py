@@ -184,7 +184,7 @@ class ZRMModel(BaseXLAModel):
         )
 
         # scaling components
-        self.log_alpha = nn.Parameter(torch.tensor(0.0))
+        self.log_alpha = nn.Parameter(torch.tensor([0.0]))
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)

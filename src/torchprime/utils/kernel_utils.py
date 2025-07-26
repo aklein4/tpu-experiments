@@ -20,9 +20,9 @@ from jax.experimental.pallas.ops.tpu.splash_attention import (
 from jax.sharding import PartitionSpec as P
 from torch_xla.core.xla_builder import call_jax
 from torch_xla.distributed.spmd import Mesh
-from torch_xla.experimental.splash_attention import (
-  SplashAttentionConfig,
-)
+# from torch_xla.experimental.splash_attention import (
+#   SplashAttentionConfig,
+# )
 
 
 @xp.trace_me("tpu_splash_attention_jax_call_wrapper")
@@ -139,7 +139,7 @@ def splash_attention_jax_wrapper(
   value,
   decoder_segment_ids,
   causal: bool,
-  config: SplashAttentionConfig,
+  config,
   attn_logits_soft_cap,
   q_seq_shards,
 ):

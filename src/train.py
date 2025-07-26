@@ -67,6 +67,7 @@ def main(config: omegaconf.DictConfig):
     # This will capture the model constructor into a graph so that we can add
     # sharding annotations to the weights later, and run the constructor on the XLA device.
     # assert config.torch_dtype == "bfloat16", "Currently only bfloat16 is supported"
+    torch.set_default_dtype(torch.float32)
     model_dtype = getattr(torch, config.torch_dtype)
     with model_utils.set_default_dtype(model_dtype), torch_xla.device():
         model_cls = import_class(config.model.model_class, constants.MODEL_MODULE)

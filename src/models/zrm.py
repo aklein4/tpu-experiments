@@ -381,19 +381,15 @@ class ZRMModel(BaseXLAModel):
             input_tokens
         )
 
-        # z_states = torch.cat(
-        #     [
-        #         expand_to_batch(self.generator_z_tokens[:1], input_tokens),
-        #         (
-        #             unsqueeze_to_batch(self.generator_z_tokens[1:], input_tokens) +
-        #             self.generator_z_proj_in(z[:, :-1])
-        #         )
-        #     ],
-        #     dim=-2
-        # )
-        z_states = (
-            unsqueeze_to_batch(self.generator_z_tokens, input_tokens) +
-            self.generator_z_proj_in(z)
+        z_states = torch.cat(
+            [
+                expand_to_batch(self.generator_z_tokens[:1], input_tokens),
+                (
+                    unsqueeze_to_batch(self.generator_z_tokens[1:], input_tokens) +
+                    self.generator_z_proj_in(z[:, :-1])
+                )
+            ],
+            dim=-2
         )
 
         generator_states = torch.cat(
@@ -424,11 +420,11 @@ class ZRMModel(BaseXLAModel):
         )
 
         # run the generator
-        generator_states = self.generator(
-            inputs_embeds=generator_states,
-            position_ids=position_ids,
-            elementwise_attention_bias=attention_bias
-        )
+        # generator_states = self.generator(
+        #     inputs_embeds=generator_states,
+        #     position_ids=position_ids,
+        #     elementwise_attention_bias=attention_bias
+        # )
         
         # get the mu values
         mu = self.generator_mu_proj_out(

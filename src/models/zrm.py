@@ -60,7 +60,6 @@ class LoRaModulator(nn.Module):
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
 
-        print(f"LoRaModulator: {x.shape} with mask {self.split_mask.shape} and rank {self.rank}")
         inner = (
             self.lora_down(x) * 
             unsqueeze_to_batch(self.split_mask, x)
@@ -418,8 +417,8 @@ class ZRMModel(BaseXLAModel):
             dim=-1
         )
 
-        # run the encoder
-        generator_states = self.encoder(
+        # run the generator
+        generator_states = self.generator(
             inputs_embeds=generator_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias
@@ -508,8 +507,8 @@ class ZRMModel(BaseXLAModel):
             dim=-1
         )
 
-        # run the encoder
-        decoder_states = self.encoder(
+        # run the decoder
+        decoder_states = self.decoder(
             inputs_embeds=decoder_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias

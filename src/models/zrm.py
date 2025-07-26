@@ -233,21 +233,21 @@ class ZRMModel(BaseXLAModel):
         )
 
         # # run the encoder
-        # encoder_mu_raw = self.encode(
-        #     input_tokens=input_tokens,
-        #     output_tokens=output_tokens,
-        #     input_mask=input_mask,
-        #     output_mask=output_mask,
-        #     input_bias=input_bias,
-        #     output_bias=output_bias,
-        #     noise=noise,
-        # )
-        # encoder_mu_raw = F.rms_norm(
-        #     encoder_mu_raw,
-        #     [self.z_size],
-        #     eps=self.config.rms_norm_eps
-        # )
-        # encoder_mu = encoder_mu_raw * alpha
+        encoder_mu_raw = self.encode(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            input_mask=input_mask,
+            output_mask=output_mask,
+            input_bias=input_bias,
+            output_bias=output_bias,
+            noise=noise,
+        )
+        encoder_mu_raw = F.rms_norm(
+            encoder_mu_raw,
+            [self.z_size],
+            eps=self.config.rms_norm_eps
+        )
+        encoder_mu = encoder_mu_raw * alpha
 
         # # run the generator
         # generator_mu_raw = self.generate(
@@ -270,7 +270,7 @@ class ZRMModel(BaseXLAModel):
             output_mask=output_mask,
             input_bias=input_bias,
             output_bias=output_bias,
-            z=noise # decoder_z,
+            z=(encoder_mu + noise),
         )
 
         return {

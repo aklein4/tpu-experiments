@@ -381,14 +381,9 @@ class ZRMModel(BaseXLAModel):
             input_tokens
         )
 
-
         z_states = expand_to_batch(self.generator_z_tokens, input_tokens)
-        z_states = z_states.clone()
-        z_states[:, 1:] += self.generator_z_proj_in(z[:, :-1])
-
-        return self.generator_mu_proj_out(
-            z_states[:, -self.z_length:]
-        )
+        # z_states = z_states.clone()
+        # z_states[:, 1:] += self.generator_z_proj_in(z[:, :-1])
 
         generator_states = torch.cat(
             [

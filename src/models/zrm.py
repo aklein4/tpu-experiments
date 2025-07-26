@@ -233,31 +233,31 @@ class ZRMModel(BaseXLAModel):
         )
 
         # # run the encoder
-        encoder_mu_raw = self.encode(
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            input_mask=input_mask,
-            output_mask=output_mask,
-            input_bias=input_bias,
-            output_bias=output_bias,
-            noise=noise,
-        )
-        encoder_mu_raw = F.rms_norm(
-            encoder_mu_raw,
-            [self.z_size],
-            eps=self.config.rms_norm_eps
-        )
-        encoder_mu = encoder_mu_raw * alpha
+        # encoder_mu_raw = self.encode(
+        #     input_tokens=input_tokens,
+        #     output_tokens=output_tokens,
+        #     input_mask=input_mask,
+        #     output_mask=output_mask,
+        #     input_bias=input_bias,
+        #     output_bias=output_bias,
+        #     noise=noise,
+        # )
+        # encoder_mu_raw = F.rms_norm(
+        #     encoder_mu_raw,
+        #     [self.z_size],
+        #     eps=self.config.rms_norm_eps
+        # )
+        # encoder_mu = encoder_mu_raw * alpha
+        encoder_mu_raw = noise * alpha
+        encoder_mu = noise * alpha
 
         # # run the generator
-        # generator_mu_raw = self.generate(
-        #     input_tokens=input_tokens,
-        #     input_mask=input_mask,
-        #     input_bias=input_bias,
-        #     z=(encoder_mu + noise)
-        # )
-        # generator_mu = generator_mu_raw * alpha
-        generator_mu_raw = encoder_mu_raw + 1
+        generator_mu_raw = self.generate(
+            input_tokens=input_tokens,
+            input_mask=input_mask,
+            input_bias=input_bias,
+            z=(encoder_mu + noise)
+        )
         generator_mu = generator_mu_raw * alpha
 
         # run the decoder   

@@ -311,7 +311,8 @@ class ZRMModel(BaseXLAModel):
 
         print(
             expand_to_batch(self.encoder_z_tokens[:, :1], input_tokens).shape,
-            (unsqueeze_to_batch(self.encoder_z_tokens[:, 1:], input_tokens) + self.encoder_noise_proj_in(noise[:, :-1])).shape
+            unsqueeze_to_batch(self.encoder_z_tokens[:, 1:], input_tokens).shape,
+            self.encoder_noise_proj_in(noise[:, :-1]).shape
         )
         z_states = torch.cat(
             [

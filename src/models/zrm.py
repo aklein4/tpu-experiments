@@ -232,37 +232,37 @@ class ZRMModel(BaseXLAModel):
             dtype=input_tokens.dtype,
         )
 
-        # run the encoder
-        encoder_mu_raw = self.encode(
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            input_mask=input_mask,
-            output_mask=output_mask,
-            input_bias=input_bias,
-            output_bias=output_bias,
-            noise=noise,
-        )
-        encoder_mu_raw = F.rms_norm(
-            encoder_mu_raw,
-            [self.z_size],
-            eps=self.config.rms_norm_eps
-        )
-        encoder_mu = encoder_mu_raw * alpha
+        # # run the encoder
+        # encoder_mu_raw = self.encode(
+        #     input_tokens=input_tokens,
+        #     output_tokens=output_tokens,
+        #     input_mask=input_mask,
+        #     output_mask=output_mask,
+        #     input_bias=input_bias,
+        #     output_bias=output_bias,
+        #     noise=noise,
+        # )
+        # encoder_mu_raw = F.rms_norm(
+        #     encoder_mu_raw,
+        #     [self.z_size],
+        #     eps=self.config.rms_norm_eps
+        # )
+        # encoder_mu = encoder_mu_raw * alpha
 
-        # run the generator
-        generator_mu_raw = self.generate(
-            input_tokens=input_tokens,
-            input_mask=input_mask,
-            input_bias=input_bias,
-            z=(encoder_mu + noise)
-        )
-        generator_mu = generator_mu_raw * alpha
+        # # run the generator
+        # generator_mu_raw = self.generate(
+        #     input_tokens=input_tokens,
+        #     input_mask=input_mask,
+        #     input_bias=input_bias,
+        #     z=(encoder_mu + noise)
+        # )
+        # generator_mu = generator_mu_raw * alpha
 
         # run the decoder
-        decoder_z = scale_gradient(
-            encoder_mu,
-            z_grad_scale,
-        ) + noise
+        # decoder_z = scale_gradient(
+        #     encoder_mu,
+        #     z_grad_scale,
+        # ) + noise
         lm_logits = self.decode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -270,8 +270,13 @@ class ZRMModel(BaseXLAModel):
             output_mask=output_mask,
             input_bias=input_bias,
             output_bias=output_bias,
-            z=decoder_z,
+            z=noise # decoder_z,
         )
+
+        return {
+            'lm_logits': lm_logits,
+            'alpha': alpha,
+        }
 
         return {
             "lm_logits": lm_logits,

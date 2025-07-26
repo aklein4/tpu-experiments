@@ -30,9 +30,9 @@ class ZRMTrainer(BaseTrainer):
             'alpha': out['alpha'],
         }
 
-        loss = aux['lm_loss'] + kl_div(
-            out['encoder_mu'], out['generator_mu']
-        ).mean()
+        loss = aux['lm_loss']
+
+        return loss, aux
 
         # aux['enc_kl_scle'] = np.clip(
         #     (self.step - self.config.trainer.enc_kl_start) / self.config.trainer.enc_kl_warmup,

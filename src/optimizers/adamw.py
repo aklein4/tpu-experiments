@@ -64,9 +64,19 @@ class AdamW(Optimizer):
         for group in self.param_groups:
             for p in group["params"]:
                 
+                # get the grad
                 if p.grad is None:
                     continue
-                grad = p.grad.data
+                grad = p.grad
+
+                # handle types
+                if grad.dtype in {torch.float16, torch.bfloat16}:
+                    grad = grad.float()
+                if grad.is_sparse:
+                    raise RuntimeError("AdamW does not support sparse gradients.")
+
+                # handle nan gradients
+                grad = torch.nan_to_num(grad, nan=0.0, posinf=0.0, neginf=0.0)
 
                 state = self.state[p]
 
@@ -74,9 +84,12 @@ class AdamW(Optimizer):
                 if len(state) == 0:
                     state["step"] = 0
                     # Exponential moving average of gradient values
-                    state["exp_avg"] = torch.zeros_like(p.data)
+                    state["exp_avg"] = torch.zeros_like(grad)
                     # Exponential moving average of squared gradient values
-                    state["exp_avg_sq"] = torch.zeros_like(p.data)
+                    state["exp_avg_sq"] = torch.zeros_like(grad)
+                else:
+                    state["exp_avg"] = state["exp_avg"].to(grad)
+                    state["exp_avg_sq"] = state["exp_avg_sq"].to(grad)
 
                 exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
                 beta1, beta2 = group["betas"]
@@ -95,7 +108,7 @@ class AdamW(Optimizer):
                     bias_correction2 = 1.0 - beta2 ** state["step"]
                     step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
 
-                p.data.addcdiv_(exp_avg, denom, value=-step_size)
+                p.addcdiv_(exp_avg, denom, value=-step_size)
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,
@@ -106,6 +119,6 @@ class AdamW(Optimizer):
                 # of the weights to the loss with plain (non-momentum) SGD.
                 # Add weight decay at the end (fixed version)
                 if group["weight_decay"] > 0.0:
-                    p.data.add_(p.data, alpha=-group["lr"] * group["weight_decay"])
+                    p.add_(p, alpha=-group["lr"] * group["weight_decay"])
 
         return loss

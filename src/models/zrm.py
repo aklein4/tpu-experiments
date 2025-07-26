@@ -184,7 +184,7 @@ class ZRMModel(BaseXLAModel):
         )
 
         # scaling components
-        self.log_alpha = nn.Parameter(torch.tensor([0.0]))
+        self.log_alpha = nn.Parameter(torch.tensor([0.0] * 64))
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
@@ -211,7 +211,7 @@ class ZRMModel(BaseXLAModel):
         assert output_ids.shape[-1] == self.output_length
 
         # get the real alpha value
-        alpha = F.softplus(self.log_alpha) / np.log(2.0)
+        alpha = F.softplus(self.log_alpha.mean()) / np.log(2.0)
         alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
 
         # get reusable components

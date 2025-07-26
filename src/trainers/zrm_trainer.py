@@ -49,14 +49,5 @@ class ZRMTrainer(BaseTrainer):
 
         loss = aux['lm_loss'] + self.config.trainer.kl_weight * aux['kl_per_token']
 
-        print(" =============== ", flush=True)
-        print("Loss:", loss.shape, flush=True)
-        for k, v in aux.items():
-            if isinstance(v, torch.Tensor):
-                print(f"{k}: {v.shape}", flush=True)
-            else:
-                print(f"{k}: {v}", flush=True)
-        print(" =============== ", flush=True)
-
         return loss, aux
     

@@ -242,7 +242,7 @@ class ZRMModel(BaseXLAModel):
         )
         encoder_mu_raw = F.rms_norm(
             encoder_mu_raw,
-            self.z_size,
+            [self.z_size],
             eps=self.config.rms_norm_eps
         )
         encoder_mu = encoder_mu_raw * alpha

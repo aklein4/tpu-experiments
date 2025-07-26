@@ -74,6 +74,14 @@ class ZRMTrainer(BaseTrainer):
         ) * w_kl
         aux["gen_kl_per_token"] = per_token(kl_gen, labels, pad_token_id)
 
+        # extra kl stuff
+        kl_mean = kl_div(
+            out['encoder_mu'],
+            out['encoder_mu'].mean(dim=0, keepdim=True)
+        )
+        aux["mean_kl_per_token"] = per_token(kl_mean, labels, pad_token_id)
+
+        # the loss
         kl_loss = (
             self.config.trainer.kl_weight * aux["enc_kl_per_token"] +
             aux["gen_kl_per_token"]

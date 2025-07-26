@@ -460,7 +460,7 @@ class LlamaForCausalLM(BaseXLAModel):
       logits,
       labels=labels,
       vocab_size=self.config.vocab_size,
-      pad_token_id=self.config.pad_token_id,
+      ignore_index=self.config.pad_token_id,
     )
     
     return logits, loss

@@ -235,7 +235,7 @@ class LlamaAttention(nn.Module):
         cos, sin = position_embeddings
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
-        # apply elementwise attention bias
+        # apply elementwise attention bias 
         if elementwise_attention_bias is not None:
             first_ind = (query_states.shape[-1] //2 ) - 1
             sec_ind = -1

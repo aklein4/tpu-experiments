@@ -60,6 +60,7 @@ class LoRaModulator(nn.Module):
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
 
+        print(f"LoRaModulator: {x.shape} with mask {self.split_mask.shape} and rank {self.rank}")
         inner = (
             self.lora_down(x) * 
             unsqueeze_to_batch(self.split_mask, x)

@@ -53,7 +53,6 @@ from optimizers.adamw import AdamW
 from models.xla import BaseXLAModel
 from utils.import_utils import import_class
 from utils import constants
-from utils.tuple_dict import TupleDict
 
 
 logger = logging.getLogger(__name__)
@@ -77,7 +76,6 @@ class BaseTrainer:
     """
 
     minibatch: bool
-    aux_keys: tuple[str] = None
 
     def __init__(
         self,
@@ -300,20 +298,21 @@ class BaseTrainer:
                 }
 
             trace_start_time = timer()
-            loss = self.train_step(batch)
-            aux = {}
+            loss, aux, grad_norm = self.train_step(batch)
             trace_end_time = timer()
 
             def step_closure(
-                epoch, step, loss, aux, trace_start_time, trace_end_time, lr
+                epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
             ):
                 loss = loss.detach().item()
+                grad_norm = grad_norm.detach().item()
 
                 logger.info(
-                    "Epoch: %.4f, step: %d, loss: %.4f, lr: %.2e, trace time: %.2f ms",
+                    "Epoch: %.4f, step: %d, loss: %.4f, grad_norm: %.4f, lr: %.2e, trace time: %.2f ms",
                     step / steps_per_epoch,
                     step,
                     loss,
+                    grad_norm,
                     lr,
                     (trace_end_time - trace_start_time) * 1000,
                 )
@@ -324,7 +323,9 @@ class BaseTrainer:
                         to_wandb[k] = v.detach().item()
                     else:
                         to_wandb[k] = v
-                to_wandb["loss"] = loss # already included in aux
+                to_wandb["loss"] = loss
+                to_wandb["grad_norm"] = grad_norm
+                to_wandb["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
                 to_wandb["lr"] = lr
                 to_wandb["epoch"] = epoch
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
@@ -341,6 +342,7 @@ class BaseTrainer:
                     epoch,
                     step,
                     loss,
+                    grad_norm,
                     aux,
                     trace_start_time,
                     trace_end_time,
@@ -349,24 +351,6 @@ class BaseTrainer:
                 run_async=True,
             )
         
-            # # Start profiler trace at the configured step
-            # if step == self.config.profile_start_step:
-            #     # Wait until device execution catches up to tracing before triggering the profile.
-            #     # This will interrupt training slightly on the hosts which are capturing, but by waiting
-            #     # after tracing for the step, the interruption will be minimal.
-            #     xm.wait_device_ops()
-
-            #     if os.path.exists(self.config.profile_dir):
-            #         shutil.rmtree(self.config.profile_dir)
-            #     os.makedirs(self.config.profile_dir)
-
-            #     xp.start_trace(self.config.profile_dir)
-
-            # # Stop profiler trace at the configured step
-            # if step == self.config.profile_end_step:
-            #     xm.wait_device_ops()
-            #     xp.stop_trace()
-
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
 
@@ -375,24 +359,21 @@ class BaseTrainer:
 
 
     @torch_xla.compile(full_graph=True)
-    def train_step(self, batch: dict) -> tuple[torch.Tensor, ...]:
+    def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         
-        loss = self.forward(batch)
-        # assert "loss" not in aux.keys()
+        loss, aux = self.forward(batch)
 
         loss.backward()
         
-        self.clip_gradients()
+        gard_norm = self.clip_gradients()
         self.optimizer.step()
         self.lr_scheduler.step()
         self.model.zero_grad()
 
-        return loss
-        self.aux_keys = ("loss",) + aux.keys()
-        return (loss,) + aux.values()
+        return loss, aux, gard_norm
 
 
-    def forward(self, batch: dict) -> tuple[torch.Tensor, TupleDict]:
+    def forward(self, batch: dict) -> tuple[torch.Tensor, dict]:
         raise NotImplementedError(
             "The forward method should be implemented in the derived class."
         )

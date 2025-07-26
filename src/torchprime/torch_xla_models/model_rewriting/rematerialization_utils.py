@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def add_activation_checkpointing_and_scan(
-  model: nn.Module, config: DictConfig
+  model: nn.Module, remat_config: DictConfig
 ) -> nn.Module:
   """Applies activation checkpointing and optionally compiles layers using scan.
 

@@ -30,25 +30,29 @@ class ZRMTrainer(BaseTrainer):
             'alpha': out['alpha'],
         }
 
-        aux['enc_kl_scle'] = np.clip(
-            (self.step - self.config.trainer.enc_kl_start) / self.config.trainer.enc_kl_warmup,
-            0.0, 1.0
-        )
-        # enc_mu = out['alpha'] * scale_gradient(
-        #     out['encoder_mu_raw'], aux['enc_kl_scle']
+        loss = aux['lm_loss'] + kl_div(
+            out['encoder_mu'], out['generator_mu']
+        ).mean()
+
+        # aux['enc_kl_scle'] = np.clip(
+        #     (self.step - self.config.trainer.enc_kl_start) / self.config.trainer.enc_kl_warmup,
+        #     0.0, 1.0
         # )
-        enc_mu = out['alpha'] * out['encoder_mu_raw'].detach()
+        # # enc_mu = out['alpha'] * scale_gradient(
+        # #     out['encoder_mu_raw'], aux['enc_kl_scle']
+        # # )
+        # enc_mu = out['alpha'] * out['encoder_mu_raw'].detach()
         
-        kl = kl_div(enc_mu, out['generator_mu'])
-        og_kl = kl.sum().detach()
+        # kl = kl_div(enc_mu, out['generator_mu'])
+        # og_kl = kl.sum().detach()
 
-        kl_scaled = kl * kl.detach()
-        kl_scaled = kl_scaled * og_kl / kl_scaled.sum().detach()
+        # kl_scaled = kl * kl.detach()
+        # kl_scaled = kl_scaled * og_kl / kl_scaled.sum().detach()
         
-        aux["num_output_tokens"] = (labels != pad_token_id).sum().float()
-        aux['kl_per_token'] = kl_scaled.sum() / (aux['num_output_tokens'] + 1)
+        # aux["num_output_tokens"] = (labels != pad_token_id).sum().float()
+        # aux['kl_per_token'] = kl_scaled.sum() / (aux['num_output_tokens'] + 1)
 
-        loss = aux['lm_loss'] + self.config.trainer.kl_weight * aux['kl_per_token']
+        # loss = aux['lm_loss'] + self.config.trainer.kl_weight * aux['kl_per_token']
 
         return loss, aux
     

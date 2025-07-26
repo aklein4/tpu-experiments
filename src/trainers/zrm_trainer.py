@@ -34,9 +34,10 @@ class ZRMTrainer(BaseTrainer):
             (self.step - self.config.trainer.enc_kl_start) / self.config.trainer.enc_kl_warmup,
             0.0, 1.0
         )
-        enc_mu = out['alpha'] * scale_gradient(
-            out['encoder_mu_raw'], aux['enc_kl_scle']
-        )
+        # enc_mu = out['alpha'] * scale_gradient(
+        #     out['encoder_mu_raw'], aux['enc_kl_scle']
+        # )
+        enc_mu = out['alpha'] * out['encoder_mu_raw'].detach()
         
         kl = kl_div(enc_mu, out['generator_mu'])
         og_kl = kl.sum().detach()

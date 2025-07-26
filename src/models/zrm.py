@@ -381,25 +381,10 @@ class ZRMModel(BaseXLAModel):
             input_tokens
         )
 
-        print(
-        f"""
-        generator_z_tokens[:1]: {self.generator_z_tokens[:1].shape},
-        expanded: {expand_to_batch(self.generator_z_tokens[:1], input_tokens).shape},
-        generator_z_tokens[1:]: {self.generator_z_tokens[1:].shape},
-        unsqueezed: {unsqueeze_to_batch(self.generator_z_tokens[1:], input_tokens).shape},
-        generator_z_proj_in(z[:, :-1]): {self.generator_z_proj_in(z[:, :-1]).shape}
-        """
-        )
-        z_states = torch.cat(
-            [
-                expand_to_batch(self.generator_z_tokens[:1], input_tokens),
-                (
-                    unsqueeze_to_batch(self.generator_z_tokens[1:], input_tokens) +
-                    self.generator_z_proj_in(z[:, :-1])
-                )
-            ],
-            dim=-2
-        )
+
+        z_states = expand_to_batch(self.generator_z_tokens, input_tokens)
+        z_states = z_states.clone()
+        z_states[:, 1:] += self.generator_z_proj_in(z[:, :-1])
 
         return self.generator_mu_proj_out(
             z_states[:, -self.z_length:]

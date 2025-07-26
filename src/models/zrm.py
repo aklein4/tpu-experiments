@@ -250,7 +250,7 @@ class ZRMModel(BaseXLAModel):
         encoder_mu = encoder_mu_raw * alpha
 
         # # run the generator
-        generator_mu_raw = self.do_generate(
+        generator_mu_raw = self.generate(
             input_tokens=input_tokens,
             input_mask=input_mask,
             input_bias=input_bias,
@@ -367,14 +367,15 @@ class ZRMModel(BaseXLAModel):
         return mu
 
 
-    def do_generate(
+    def generate(
         self,
         input_tokens: torch.Tensor,
         input_mask: torch.Tensor,
         input_bias: torch.FloatTensor,
         z: torch.FloatTensor,
     ):
-        
+        return z
+
         # construct the generator input
         input_states = (
             unsqueeze_to_batch(self.generator_input_emb, input_tokens) +

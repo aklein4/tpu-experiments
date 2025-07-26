@@ -1,0 +1,45 @@
+# Weights
+embed_tokens.weight: [fsdp, null]
+lm_head.weight: [fsdp, null]
+
+'*.layers.*.self_attn.o_proj.weight': [fsdp, null]
+'*.layers.*.mlp.down_proj.weight': [null, fsdp]
+
+'*.layers.*.input_layernorm.weight': [fsdp]
+'*.layers.*.post_attention_layernorm.weight': [fsdp]
+'*.norm.weight': [fsdp]
+
+'*.layers.*.self_attn.qkv_proj.base_linear.weight': [fsdp, null]
+'*.layers.*.self_attn.qkv_proj.lora_down.weight': [null, fsdp]
+'*.layers.*.self_attn.qkv_proj.lora_up.weight': [fsdp, null]
+
+'*.layers.*.mlp.gate_up_proj.base_linear.weight': [fsdp, null]
+'*.layers.*.mlp.gate_up_proj.lora_down.weight': [null, fsdp]
+'*.layers.*.mlp.gate_up_proj.lora_up.weight': [fsdp, null]
+
+encoder_input_emb: [null, fsdp]
+encoder_sep_token: [fsdp]
+encoder_output_emb: [null, fsdp]
+encoder_z_tokens: [null, fsdp]
+
+generator_input_emb: [null, fsdp]
+generator_z_tokens: [null, fsdp]
+
+decoder_input_emb: [null, fsdp]
+decoder_z_tokens: [null, fsdp]
+decoder_start_output_token: [fsdp]
+decoder_output_emb: [null, fsdp]
+
+encoder_noise_proj_in.weight: [fsdp, null]
+encoder_mu_proj_out.weight: [null, fsdp]
+
+generator_z_proj_in.weight: [fsdp, null]
+generator_mu_proj_out.weight: [null, fsdp]
+
+decoder_z_proj_in.weight: [fsdp, null]
+
+log_alpha: [null]
+
+# Activations
+'*.layers.*': [[data, fsdp], null, null]
+lm_head: [[data, fsdp], null, null]

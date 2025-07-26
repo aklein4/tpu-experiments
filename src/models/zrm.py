@@ -67,10 +67,13 @@ class LoRaModulator(nn.Module):
         outer = self.lora_up(inner)
 
         # return the result
-        return self.base_linear(x) + outer
+        return (
+            self.base_linear(x) * np.sqrt(0.5) +
+            outer * np.sqrt(0.5)
+        )
 
 
-class ZRModel(BaseXLAModel):
+class ZRMModel(BaseXLAModel):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -107,6 +110,8 @@ class ZRModel(BaseXLAModel):
             )
         ]
         for transformer, splits in transformer_splits:
+            transformer: LlamaModel
+            
             for layer in transformer.layers:
                 layer.self_attn.qkv_proj = LoRaModulator(
                     layer.self_attn.qkv_proj,
@@ -118,6 +123,8 @@ class ZRModel(BaseXLAModel):
                     self.lora_rank,
                     splits
                 )
+            
+            transformer.embed_tokens = None
         
         # LM components
         self.embed_tokens = nn.Embedding(self.vocab_size, self.hidden_size)
@@ -125,44 +132,44 @@ class ZRModel(BaseXLAModel):
 
         # input embeddings
         self.encoder_input_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+            torch.randn(1, self.hidden_size)
         )
-        self.encoder_sep_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+        self.encoder_sep_token = nn.Parameter(
+            torch.randn(self.hidden_size)
         )
         self.encoder_output_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+            torch.randn(1, self.hidden_size)
         )
         self.encoder_z_tokens = nn.Parameter(
-                torch.randn(self.z_length, self.hidden_size) * self.config.initializer_range
+            torch.randn(self.z_length, self.hidden_size)
         )
 
         self.generator_input_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+                torch.randn(1, self.hidden_size)
         )
         self.generator_z_tokens = nn.Parameter(
-                torch.randn(self.z_length, self.hidden_size) * self.config.initializer_range
+                torch.randn(self.z_length, self.hidden_size)
         )
 
         self.decoder_input_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+                torch.randn(1, self.hidden_size)
         )
         self.decoder_z_tokens = nn.Parameter(
-                torch.randn(self.z_length, self.hidden_size) * self.config.initializer_range
+                torch.randn(self.z_length, self.hidden_size)
         )
         self.decoder_start_output_token = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+                torch.randn(self.hidden_size)
         )
         self.decoder_output_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+                torch.randn(1, self.hidden_size)
         )
 
         # z/noise io components
         self.encoder_noise_proj_in = nn.Linear(
-                self.z_size, self.hidden_size, bias=False
+            self.z_size, self.hidden_size, bias=False
         )
         self.encoder_mu_proj_out = nn.Linear(
-                self.hidden_size, self.z_size, bias=False
+            self.hidden_size, self.z_size, bias=False
         )
 
         self.generator_z_proj_in = nn.Linear(
@@ -181,6 +188,17 @@ class ZRModel(BaseXLAModel):
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
+
+
+    def _init_weights(self, module: nn.Module):
+
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)
+            if module.bias is not None:
+                module.bias.data.zero_()
+
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=1.0)
 
 
     def forward(
@@ -284,7 +302,7 @@ class ZRModel(BaseXLAModel):
             expand_to_batch(self.encoder_output_emb, output_tokens) +
             torch.cat(
                 [
-                    output_tokens[:, :1] + expand_to_batch(self.encoder_sep_emb, output_tokens[:, :1]),
+                    output_tokens[:, :1] + expand_to_batch(self.encoder_sep_token[None], output_tokens[:, :1]),
                     output_tokens[:, 1:],
                 ],
                 dim=-2
@@ -320,7 +338,7 @@ class ZRModel(BaseXLAModel):
             ],
             dim=-1
         )
-        position_ids = position_mask.cumsum(dim=-1) - 1
+        position_ids = position_mask.cumsum(dim=-1)
 
         # create the bias
         attention_bias = torch.cat(
@@ -388,7 +406,7 @@ class ZRModel(BaseXLAModel):
             ],
             dim=-1
         )
-        position_ids = position_mask.cumsum(dim=-1) - 1
+        position_ids = position_mask.cumsum(dim=-1)
 
         # create the bias
         attention_bias = torch.cat(
@@ -440,7 +458,7 @@ class ZRModel(BaseXLAModel):
             expand_to_batch(self.decoder_output_emb, output_tokens) +
             torch.cat(
                 [
-                    expand_to_batch(self.decoder_start_output_token, output_tokens[:, :-1]),
+                    expand_to_batch(self.decoder_start_output_token[None], output_tokens[:, :-1]),
                     output_tokens[:, :-1],
                 ],
                 dim=-2
@@ -471,7 +489,7 @@ class ZRModel(BaseXLAModel):
             ],
             dim=-1
         )
-        position_ids = position_mask.cumsum(dim=-1) - 1
+        position_ids = position_mask.cumsum(dim=-1)
 
         # create the bias
         attention_bias = torch.cat(
@@ -498,7 +516,6 @@ class ZRModel(BaseXLAModel):
         
         # get the lm head logits
         lm_logits = self.lm_head(decoder_states[:, -self.output_length:])
-        lm_logits = torch.nn.functional.log_softmax(lm_logits, dim=-1)
 
         return lm_logits
     

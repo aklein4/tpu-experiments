@@ -283,6 +283,7 @@ class BaseTrainer:
                 epoch += 1
                 train_iterator = iter(train_loader)
                 batch = next(train_iterator)
+            self.step = step
 
             # when context parallel and load balance context parallel is enabled,
             # we will reorder the sequence here for each batch

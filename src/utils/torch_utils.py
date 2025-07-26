@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 def scale_gradient(x, scale):
-    if isinstance(scale, torch.Tensor):
+    if isinstance(scale, (torch.Tensor, nn.Parameter)):
         scale = scale.detach()
     return x.detach() + (x - x.detach()) * scale
 

@@ -381,6 +381,10 @@ class ZRMModel(BaseXLAModel):
             input_tokens
         )
 
+        return self.generator_mu_proj_out(
+            input_states[:, -self.z_length:]
+        )
+
         z_states = torch.cat(
             [
                 expand_to_batch(self.generator_z_tokens[:1], input_tokens),
@@ -398,10 +402,6 @@ class ZRMModel(BaseXLAModel):
                 z_states,
             ],
             dim=-2
-        )
-
-        return self.generator_mu_proj_out(
-            generator_states[:, -self.z_length:]
         )
 
         # create the position ids

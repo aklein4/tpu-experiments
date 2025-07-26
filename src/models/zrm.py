@@ -381,9 +381,6 @@ class ZRMModel(BaseXLAModel):
             input_tokens
         )
 
-        return self.generator_mu_proj_out(
-            input_states[:, -self.z_length:]
-        )
 
         z_states = torch.cat(
             [
@@ -394,6 +391,10 @@ class ZRMModel(BaseXLAModel):
                 )
             ],
             dim=-2
+        )
+
+        return self.generator_mu_proj_out(
+            z_states[:, -self.z_length:]
         )
 
         generator_states = torch.cat(

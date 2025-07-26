@@ -7,16 +7,20 @@ defaults:
   - _self_ # refers to this config file
   - model: llama-3-test # refers to model/llama-3-test.yaml
   - data: tokenized # refers to dataset/tokenized.yaml
-  - trainer: llm # refers to trainer/llm.yaml
+  - trainer: llama-3-2b # refers to trainer/llama-3-2b.yaml
 
+
+# compute configuration
 seed: 42
-torch_dtype: bfloat16
+torch_dtype: float32
+
 
 # logging and saving configuration
 debug: false
 project: prime-testing
 name: test
 notes: null
+
 
 # The virtual device mesh shape to use within a TPU slice. This is also called
 # the "ICI mesh", since devices within a slice enjoy a faster network called

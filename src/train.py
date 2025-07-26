@@ -20,11 +20,9 @@ from torchprime.torch_xla_models.utils.config_utils import config_vaidator
 from data.datasets import get_dataset
 from utils import constants
 from utils.import_utils import import_class
-from utils.logging_utils import OnlyMain
-from utils.jax_workarounds import jax_env_context
 
 transformers.utils.check_min_version("4.39.3")
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 xr.use_spmd()
 assert xr.is_spmd() is True
@@ -45,11 +43,15 @@ def main(config: omegaconf.DictConfig):
         print("\n ========================= \n", flush=True)
 
     # set up logging
-    log_level = logging.INFO
-    logger.setLevel(log_level)
-    # logger.addFilter(OnlyMain())
-    datasets.utils.logging.set_verbosity(log_level)
-    transformers.utils.logging.set_verbosity(log_level)
+    logger.setLevel(logging.INFO)
+    if constants.PROCESS_IS_MAIN():
+        verbosity = logging.INFO 
+    else:
+        logging.disable(logging.CRITICAL)
+        verbosity = logging.CRITICAL
+    datasets.utils.logging.set_verbosity(verbosity)
+    transformers.utils.logging.set_verbosity(verbosity)
+    transformers.utils.logging.enable_default_handler()
     transformers.utils.logging.enable_explicit_format()
 
     # set training seeds
@@ -59,14 +61,15 @@ def main(config: omegaconf.DictConfig):
     # Set the model dtype to bfloat16, and set the default device to the XLA device.
     # This will capture the model constructor into a graph so that we can add
     # sharding annotations to the weights later, and run the constructor on the XLA device.
-    assert config.torch_dtype == "bfloat16", "Currently only bfloat16 is supported"
+    # assert config.torch_dtype == "bfloat16", "Currently only bfloat16 is supported"
+    torch.set_default_dtype(torch.float32)
     model_dtype = getattr(torch, config.torch_dtype)
     with model_utils.set_default_dtype(model_dtype), torch_xla.device():
         model_cls = import_class(config.model.model_class, constants.MODEL_MODULE)
         model = model_cls(config.model)
 
     # print model information
-    model_utils.log_parameter_breakdown(model, logger, simple=True)
+    model_utils.log_parameter_breakdown(model, logger)
     logger.info(f"Model initialized: {config.model.model_class}")
 
     # Create the dataset

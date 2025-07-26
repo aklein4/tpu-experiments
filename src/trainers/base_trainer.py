@@ -49,19 +49,13 @@ from torchprime.utils.parallelism_utils import lb_cp_enabled, reorder_sequence
 import wandb
 import huggingface_hub as hf
 
+from optimizers.adamw import AdamW
 from models.xla import BaseXLAModel
 from utils.import_utils import import_class
 from utils import constants
 
 
-logger = logging.getLogger()
-
-
-def get_model_dtype(module: nn.Module) -> torch.dtype:
-    dtypes = {param.dtype for param in module.parameters()}
-    if len(dtypes) != 1:
-        raise ValueError(f"Inconsistent dtypes found: {dtypes}")
-    return dtypes.pop()
+logger = logging.getLogger(__name__)
 
 
 _ADAFACTOR = "adafactor"
@@ -113,7 +107,7 @@ class BaseTrainer:
         self.model = model
 
         # create optimizer and learning rate scheduler
-        self.optimizer = self._create_optimizer(config, model.parameters())
+        self.optimizer = type(self)._create_optimizer(config, model.parameters())
         self.lr_scheduler = get_scheduler(
             name=self.config.trainer.lr_scheduler.type,
             optimizer=self.optimizer,
@@ -153,7 +147,7 @@ class BaseTrainer:
             )
 
         if config.trainer.optimizer.type == _ADAMW:
-            optimizer = torch.optim.AdamW(
+            optimizer = AdamW(
                 params=model_parameters,
                 lr=config.trainer.optimizer.learning_rate,
                 weight_decay=config.trainer.optimizer.weight_decay,
@@ -277,8 +271,8 @@ class BaseTrainer:
         train_iterator = iter(train_loader)
 
         logger.info("Starting training")
-        logger.info("        Max step: %d", max_step)
-        logger.info("        Global batch size: %d", self.global_batch_size)
+        logger.info("    Max step: %d", max_step)
+        logger.info("    Global batch size: %d", self.global_batch_size)
 
         epoch = 0
         for step in range(max_step):
@@ -304,20 +298,21 @@ class BaseTrainer:
                 }
 
             trace_start_time = timer()
-            loss, aux = self.train_step(batch)
+            loss, aux, grad_norm = self.train_step(batch)
             trace_end_time = timer()
 
             def step_closure(
-                epoch, step, loss, aux, trace_start_time, trace_end_time, lr_scheduler
+                epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
             ):
                 loss = loss.detach().item()
-                lr = lr_scheduler.get_last_lr()[0]
+                grad_norm = grad_norm.detach().item()
 
                 logger.info(
-                    "Epoch: %.4f, step: %d, loss: %.4f, lr: %.2e, trace time: %.2f ms",
+                    "Epoch: %.4f, step: %d, loss: %.4f, grad_norm: %.4f, lr: %.2e, trace time: %.2f ms",
                     step / steps_per_epoch,
                     step,
                     loss,
+                    grad_norm,
                     lr,
                     (trace_end_time - trace_start_time) * 1000,
                 )
@@ -329,6 +324,8 @@ class BaseTrainer:
                     else:
                         to_wandb[k] = v
                 to_wandb["loss"] = loss
+                to_wandb["grad_norm"] = grad_norm
+                to_wandb["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
                 to_wandb["lr"] = lr
                 to_wandb["epoch"] = epoch
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
@@ -345,46 +342,38 @@ class BaseTrainer:
                     epoch,
                     step,
                     loss,
+                    grad_norm,
                     aux,
                     trace_start_time,
                     trace_end_time,
-                    self.lr_scheduler,
+                    self.lr_scheduler.get_last_lr()[0],
                 ),
-                run_async=False,
+                run_async=True,
             )
         
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
-            
-            # xm.mark_step()
-            # xm.wait_device_ops()
-            # xm.rendezvous(f"after_step {step}")
-            # logger.info(f"Process {constants.PROCESS_INDEX()} finished mark_step {step}")
-            # xm.wait_device_ops()
-            # logger.info(f"Process {constants.PROCESS_INDEX()} finished waiting for device ops after mark_step {step}")
-            # xm.rendezvous(f"after_step {step}")
-            # logger.info(f"Process {constants.PROCESS_INDEX()} FINISHED step {step}")
 
         xm.wait_device_ops()
         logger.info("Finished training run")
 
 
     @torch_xla.compile(full_graph=True)
-    def train_step(self, batch: dict) -> tuple[torch.Tensor, torch.Tensor]:
+    def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         
         loss, aux = self.forward(batch)
-        
+
         loss.backward()
         
-        # self.clip_gradients()
+        gard_norm = self.clip_gradients()
         self.optimizer.step()
         self.lr_scheduler.step()
         self.model.zero_grad()
 
-        return loss, aux
+        return loss, aux, gard_norm
 
 
-    def forward(self, batch: dict):
+    def forward(self, batch: dict) -> tuple[torch.Tensor, dict]:
         raise NotImplementedError(
             "The forward method should be implemented in the derived class."
         )

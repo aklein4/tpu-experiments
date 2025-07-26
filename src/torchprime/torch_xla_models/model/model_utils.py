@@ -24,7 +24,7 @@ import torch.distributed.checkpoint as dist_cp
 import torch_xla.experimental.distributed_checkpoint as xc
 from transformers import AutoTokenizer
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 HF_MODEL_CONFIG_FILES = [
   "config.json",
@@ -151,11 +151,11 @@ def initialize_model_class(model_config):
       module = None
 
   if module is None:
-    logger.error(f"Error: Failed to import module '{module_name}' or 'model.{module_name}'")
+    print(f"Error: Failed to import module '{module_name}' or 'model.{module_name}'")
     sys.exit(1)
 
   if not hasattr(module, model_class_name):
-    logger.error(f"Error: Class '{model_class_name}' not found in module '{module.__name__}'")
+    print(f"Error: Class '{model_class_name}' not found in module '{module.__name__}'")
     sys.exit(1)
 
   model_class = getattr(module, model_class_name)
@@ -207,7 +207,7 @@ def extract_model_size_from_model_name(model_name: str) -> int | float:
   return -1
 
 
-def log_parameter_breakdown(model: torch.nn.Module, logger: logging.Logger, simple=False) -> None:
+def log_parameter_breakdown(model: torch.nn.Module, logger: logging.Logger) -> None:
   """Logs the number of parameters in different components of the model.
 
   Args:
@@ -216,8 +216,6 @@ def log_parameter_breakdown(model: torch.nn.Module, logger: logging.Logger, simp
   """
   total_params = sum(p.numel() for p in model.parameters())
   logger.info("Model total size: {} parameters".format(f"{total_params:,}"))
-  if simple:
-    return
 
   param_groups = {
     "mlp": 0,
@@ -326,7 +324,6 @@ def convert_to_safetensors_on_cpu(model: torch.nn.Module, save_dir: Path) -> Non
     }
   }
 
-  logger.info("Materializing checkpoint on CPU …")
   dist_cp.load(
     state_dict=reload_sd,
     storage_reader=dist_cp.FileSystemReader(str(save_dir)),
@@ -351,7 +348,7 @@ def convert_to_safetensors_on_cpu(model: torch.nn.Module, save_dir: Path) -> Non
     tmp_dir = tempfile.mkdtemp()
     logger.info("Using default temp directory for safetensors shards: %s", tmp_dir)
 
-  save_sharded_safetensors_by_layer(cpu_state, str(save_dir))
+  save_sharded_safetensors_by_layer(cpu_state, str(save_dir), tmp_dir=tmp_dir)
   logger.info("Safetensors shards + index written to %s", save_dir)
 
 

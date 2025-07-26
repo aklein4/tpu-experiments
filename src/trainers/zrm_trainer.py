@@ -70,7 +70,7 @@ class ZRMTrainer(BaseTrainer):
         # kl with respect to the generator
         kl_gen = kl_div(
             out['encoder_mu'].detach(),
-            out['alpha'].detach() * out['generator_mu_raw']
+            out['alpha'] * out['generator_mu_raw'] # TODO: detach alpha here
         ) * w_kl
         aux["gen_kl_per_token"] = per_token(kl_gen, labels, pad_token_id)
 

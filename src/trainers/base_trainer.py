@@ -102,7 +102,20 @@ class BaseTrainer:
             model, config
         )
         model = mark_pure_modules(model, config)
-        model = add_activation_checkpointing_and_scan(model, config)
+
+        try:
+            modules_to_remat = config.model.remat.apply_to_modules
+            logger.info(f"Applying rematerialization to modules: {modules_to_remat}")
+            for name in modules_to_remat:
+                setattr(
+                    model, name,
+                    add_activation_checkpointing_and_scan(
+                        getattr(model, name), config.model.remat
+                    )
+                )
+        except:
+            model = add_activation_checkpointing_and_scan(model, config.model.remat)
+        
         model = add_optimization_barriers(model, config)
         self.model = model
 

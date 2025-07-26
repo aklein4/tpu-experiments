@@ -50,7 +50,7 @@ def add_activation_checkpointing_and_scan(
     NotImplementedError: If multiple layers are passed for offloading.
     NotImplementedError: If checkpointed layer does not match scanned layer.
   """
-  remat_config = config.model.remat
+  # remat_config = config.model.remat
   remat_classes = get_classes_by_names(
     model, remat_config.get("activation_checkpoint_layers", [])
   )

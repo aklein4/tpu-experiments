@@ -211,9 +211,9 @@ class ZRMModel(BaseXLAModel):
         assert output_ids.shape[-1] == self.output_length
 
         # get the real alpha value
-        # alpha = F.softplus(self.log_alpha.mean()) / np.log(2.0)
-        # alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
-        alpha = np.sqrt(np.log(self.vocab_size) / self.z_size)
+        alpha = F.softplus(self.log_alpha.mean()) / np.log(2.0)
+        alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
+        # alpha = np.sqrt(np.log(self.vocab_size) / self.z_size)
 
         # get reusable components
         input_tokens = self.embed_tokens(input_ids)
@@ -258,11 +258,7 @@ class ZRMModel(BaseXLAModel):
         )
         generator_mu = generator_mu_raw * alpha
 
-        # run the decoder
-        decoder_z = scale_gradient(
-            encoder_mu,
-            z_grad_scale,
-        ) + noise
+        # run the decoder    
         lm_logits = self.decode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -270,7 +266,7 @@ class ZRMModel(BaseXLAModel):
             output_mask=output_mask,
             input_bias=input_bias,
             output_bias=output_bias,
-            z=decoder_z,
+            z=(encoder_mu + noise),
         )
 
         return {

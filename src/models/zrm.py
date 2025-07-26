@@ -381,8 +381,6 @@ class ZRMModel(BaseXLAModel):
             input_tokens
         )
 
-        print("Good shape:", expand_to_batch(self.generator_z_tokens, input_tokens).shape)
-        print("Broken state:", self.generator_z_proj_in(torch.randn_like(z)).shape)
         # z_states = expand_to_batch(self.generator_z_tokens, input_tokens)
         # z_states = z_states.contiguous().clone()
         # z_states[:, 1:] += self.generator_z_proj_in(z[:, :-1]).contiguous()

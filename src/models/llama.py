@@ -352,17 +352,17 @@ class LlamaModel(nn.Module):
     def forward(
         self,
         input_ids: torch.LongTensor | None = None,
-        input_embeds: torch.FloatTensor | None = None,
+        inputs_embeds: torch.FloatTensor | None = None,
         attention_mask: torch.FloatTensor | None = None,
         position_ids: torch.LongTensor | None = None,
         elementwise_attention_bias: torch.LongTensor | None = None,
     ) -> torch.Tensor:
-        assert (input_ids is not None) ^ (input_embeds is not None), (
-            "You have to specify either input_ids or input_embeds, but not both."
+        assert (input_ids is not None) ^ (inputs_embeds is not None), (
+            "You have to specify either input_ids or inputs_embeds, but not both."
         )
         
         # convert input ids to embeddings
-        if input_embeds is None:
+        if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
         seq_length = inputs_embeds.shape[1]

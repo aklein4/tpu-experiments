@@ -352,7 +352,7 @@ class ZRMModel(BaseXLAModel):
 
         # run the encoder
         encoder_states = self.encoder(
-            input_embeds=encoder_states,
+            inputs_embeds=encoder_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias
         )
@@ -419,7 +419,7 @@ class ZRMModel(BaseXLAModel):
 
         # run the encoder
         generator_states = self.encoder(
-            input_embeds=generator_states,
+            inputs_embeds=generator_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias
         )
@@ -509,7 +509,7 @@ class ZRMModel(BaseXLAModel):
 
         # run the encoder
         decoder_states = self.encoder(
-            input_embeds=decoder_states,
+            inputs_embeds=decoder_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias
         )

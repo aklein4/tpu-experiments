@@ -260,7 +260,11 @@ class ZRMModel(BaseXLAModel):
         generator_mu_raw = encoder_mu_raw + 1
         generator_mu = generator_mu_raw * alpha
 
-        # run the decoder    
+        # run the decoder   
+        decoder_z = scale_gradient(
+            encoder_mu,
+            z_grad_scale,
+        ) + noise
         lm_logits = self.decode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -268,7 +272,7 @@ class ZRMModel(BaseXLAModel):
             output_mask=output_mask,
             input_bias=input_bias,
             output_bias=output_bias,
-            z=(encoder_mu + noise),
+            z=decoder_z,
         )
 
         return {

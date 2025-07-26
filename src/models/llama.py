@@ -419,7 +419,6 @@ class LlamaForCausalLM(BaseXLAModel):
 
     
     def _init_weights(self, module: nn.Module):
-        logger.info(f"Initializing weights for {module.__class__.__name__}")
 
         if isinstance(module, nn.Linear):
             module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)

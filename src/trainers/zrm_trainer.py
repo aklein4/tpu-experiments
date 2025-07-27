@@ -35,6 +35,13 @@ class ZRMTrainer(BaseTrainer):
             output_ids=batch['output_ids'],
         )
 
+        loss = (
+            kl_div(out['encoder_mu'], out['generator_mu']).mean() +
+            loss_utils.cross_entropy_loss(out['lm_logits'], batch['input_ids'], pad_token_id, shifted=True)
+        )
+
+        return loss, {}
+
         # handle LM
         logits, labels = out['lm_logits'], batch['output_ids']
         aux = {

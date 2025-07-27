@@ -395,7 +395,6 @@ class ZRMModel(BaseXLAModel):
             ],
             dim=-2
         )
-        xm.optimization_barrier_([generator_states])
 
         # create the position ids
         position_mask = torch.cat(

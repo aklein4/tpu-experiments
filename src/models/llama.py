@@ -435,9 +435,13 @@ class LlamaForCausalLM(BaseXLAModel):
         input_ids: torch.LongTensor,
         labels: torch.LongTensor | None = None,
         attention_mask: torch.FloatTensor | None = None,
+        hidden_states_only: bool = False,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         
         hidden_states = self.model(input_ids=input_ids, attention_mask=attention_mask)
+
+        if hidden_states_only:
+            return hidden_states
 
         logits = self.lm_head(hidden_states)
         logits = logits.float()

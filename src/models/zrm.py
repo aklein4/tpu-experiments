@@ -68,7 +68,6 @@ class LoRaModulator(nn.Module):
         )
         outer = self.lora_up(inner)
 
-        # return the result
         return (
             self.base_linear(x) * np.sqrt(0.5) +
             outer * np.sqrt(0.5)
@@ -383,9 +382,15 @@ class ZRMModel(BaseXLAModel):
             input_tokens
         )
 
-        z_states = (
-            expand_to_batch(self.generator_z_tokens, input_tokens)
-            + self.generator_z_proj_in(z)
+        z_states = torch.cat(
+            [
+                expand_to_batch(self.generator_z_tokens[:1], input_tokens),
+                (
+                    unsqueeze_to_batch(self.generator_z_tokens[1:], input_tokens) +
+                    self.generator_z_proj_in(z[:, :-1])
+                )
+            ],
+            dim=-2
         )
  
         generator_states = torch.cat(

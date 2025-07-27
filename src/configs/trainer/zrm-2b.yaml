@@ -19,6 +19,8 @@ optimizer:
   beta1: 0.9
   beta2: 0.95
 
+  update_clip: 3.0
+
 
 # Learning rate scheduler configuration.
 lr_scheduler:

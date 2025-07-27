@@ -168,6 +168,7 @@ class BaseTrainer:
                     config.trainer.optimizer.beta1,
                     config.trainer.optimizer.beta2,
                 ),
+                update_clip=config.trainer.optimizer.update_clip,
             )
 
         elif config.trainer.optimizer.type == _ADAFACTOR:

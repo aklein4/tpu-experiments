@@ -88,5 +88,10 @@ class ZRMTrainer(BaseTrainer):
         )
         loss = aux['lm_loss'] + kl_loss
 
+        # check for NaNs
+        aux["nan_logits"] = (~torch.isfinite(out['lm_logits'])).any().float()
+        aux["nan_encoder_mu"] = (~torch.isfinite(out['encoder_mu'])).any().float()
+        aux["nan_generator_mu"] = (~torch.isfinite(out['generator_mu'])).any().float()
+
         return loss, aux
     

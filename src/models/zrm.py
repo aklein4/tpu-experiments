@@ -254,7 +254,7 @@ class ZRMModel(BaseXLAModel):
             input_tokens=input_tokens,
             input_mask=input_mask,
             input_bias=input_bias,
-            z=noise
+            z=(encoder_mu + noise)
         )
         generator_mu = generator_mu_raw * alpha
 
@@ -380,8 +380,6 @@ class ZRMModel(BaseXLAModel):
             unsqueeze_to_batch(self.generator_input_emb, input_tokens) +
             input_tokens
         )
-
-        return self.generator_mu_proj_out(input_states[:, -self.z_length:])
 
         z_states = expand_to_batch(self.generator_z_tokens, input_tokens)
         z_states = z_states.contiguous().clone()

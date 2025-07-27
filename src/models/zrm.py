@@ -184,7 +184,7 @@ class ZRMModel(BaseXLAModel):
         )
 
         # scaling components
-        self.log_alpha = nn.Parameter(torch.tensor([0.0]))
+        self.log_alpha = nn.Parameter(torch.tensor([0.0] * 64))
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
@@ -250,12 +250,14 @@ class ZRMModel(BaseXLAModel):
         encoder_mu = encoder_mu_raw * alpha
 
         # # run the generator
-        generator_mu_raw = self.generate(
-            input_tokens=input_tokens,
-            input_mask=input_mask,
-            input_bias=input_bias,
-            z=noise
-        )
+        # generator_mu_raw = self.generate(
+        #     input_tokens=input_tokens,
+        #     input_mask=input_mask,
+        #     input_bias=input_bias,
+        #     z=noise
+        # )
+        # generator_mu = generator_mu_raw * alpha
+        generator_mu_raw = encoder_mu_raw + 1
         generator_mu = generator_mu_raw * alpha
 
         # run the decoder   

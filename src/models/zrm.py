@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import torch_xla.core.xla_model as xm
+
 import numpy as np
 
 from models.xla import BaseXLAModel
@@ -383,9 +385,9 @@ class ZRMModel(BaseXLAModel):
 
         z_states = (
             expand_to_batch(self.generator_z_tokens, input_tokens)
-            # + self.generator_z_proj_in(z)
+            + self.generator_z_proj_in(z)
         )
-
+ 
         generator_states = torch.cat(
             [
                 input_states,
@@ -393,6 +395,7 @@ class ZRMModel(BaseXLAModel):
             ],
             dim=-2
         )
+        xm.optimization_barrier_([generator_states])
 
         # create the position ids
         position_mask = torch.cat(

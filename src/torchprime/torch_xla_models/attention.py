@@ -165,14 +165,9 @@ class AttentionModule(nn.Module):
           attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        device_type = query_states.device.type
-        device_type = (
-            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
-        )
-        with torch.autocast(device_type=device_type, enabled=False):
-          attn_weights = nn.functional.softmax(
-            attn_weights, dim=-1, dtype=torch.float32
-          ).to(query_states.dtype)
+        attn_weights = nn.functional.softmax(
+          attn_weights, dim=-1, dtype=torch.float32
+        ).to(query_states.dtype)
 
         attn_weights = nn.functional.dropout(
           attn_weights, p=self.config.attention_dropout, training=self.training

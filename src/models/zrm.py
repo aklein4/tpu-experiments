@@ -381,6 +381,8 @@ class ZRMModel(BaseXLAModel):
             input_tokens
         )
 
+        return self.generator_mu_proj_out(input_states[:, -self.z_length:])
+
         z_states = expand_to_batch(self.generator_z_tokens, input_tokens)
         z_states = z_states.contiguous().clone()
         z_states[:, 1:] += self.generator_z_proj_in(z[:, :-1]).contiguous()

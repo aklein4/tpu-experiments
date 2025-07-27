@@ -11,7 +11,7 @@ checkpoint_interval: 10000  # Save a checkpoint every N steps
 
 # Optimizer configuration.
 optimizer:
-  type: adafactor adamw
+  type: adafactor # adamw
 
   learning_rate: 1.0e-4
   # weight_decay: 0.1

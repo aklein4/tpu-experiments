@@ -232,7 +232,7 @@ class ZRMModel(BaseXLAModel):
             dtype=input_tokens.dtype,
         )
 
-        # # run the encoder
+        # run the encoder
         encoder_mu_raw = self.encode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -249,7 +249,7 @@ class ZRMModel(BaseXLAModel):
         )
         encoder_mu = encoder_mu_raw * alpha
 
-        # # run the generator
+        # run the generator
         generator_mu_raw = self.generate(
             input_tokens=input_tokens,
             input_mask=input_mask,
@@ -382,9 +382,9 @@ class ZRMModel(BaseXLAModel):
         )
 
         z_states = expand_to_batch(self.generator_z_tokens, input_tokens)
-        z_states = z_states.contiguous().clone()
-        z_states[:, 1:] += self.generator_z_proj_in(z[:, :-1]).contiguous()
-        z_states = z_states.contiguous()
+        # z_states = z_states.contiguous().clone()
+        # z_states[:, 1:] += self.generator_z_proj_in(z[:, :-1]).contiguous()
+        # z_states = z_states.contiguous()
 
         generator_states = torch.cat(
             [

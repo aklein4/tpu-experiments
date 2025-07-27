@@ -382,16 +382,17 @@ class ZRMModel(BaseXLAModel):
             input_tokens
         )
 
-        z_states = torch.cat(
-            [
-                expand_to_batch(self.generator_z_tokens[:1], input_tokens),
-                (
-                    unsqueeze_to_batch(self.generator_z_tokens[1:], input_tokens) +
-                    self.generator_z_proj_in(z[:, :-1])
-                )
-            ],
-            dim=-2
-        )
+        # z_states = torch.cat(
+        #     [
+        #         expand_to_batch(self.generator_z_tokens[:1], input_tokens),
+        #         (
+        #             unsqueeze_to_batch(self.generator_z_tokens[1:], input_tokens) +
+        #             self.generator_z_proj_in(z[:, :-1])
+        #         )
+        #     ],
+        #     dim=-2
+        # )
+        z_states = expand_to_batch(self.generator_z_tokens, input_tokens)
  
         generator_states = torch.cat(
             [

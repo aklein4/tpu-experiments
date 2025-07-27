@@ -54,12 +54,12 @@ class ZRMTrainer(BaseTrainer):
         w_kl = get_w_kl(kl)
 
         # kl with respect to the encoder and alpha
-        aux['enc_kl_scle'] = np.clip(
+        aux['enc_kl_scale'] = np.clip(
             (self.step - self.config.trainer.enc_kl_start) / self.config.trainer.enc_kl_warmup,
             0.0, 1.0
         )
         enc_mu = out['alpha'] * scale_gradient(
-            out['encoder_mu_raw'], aux['enc_kl_scle']
+            out['encoder_mu_raw'], aux['enc_kl_scale']
         )
         kl_enc = kl_div(
             enc_mu,

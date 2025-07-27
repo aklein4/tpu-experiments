@@ -386,7 +386,8 @@ class ZRMModel(BaseXLAModel):
             [
                 z_states[:, :1],
                 z_states[:, 1:] + self.generator_z_proj_in(z[:, :-1]),
-            ]
+            ],
+            dim=-2
         )
         # z_states = z_states.contiguous().clone()
         # z_states[:, 1:] += self.generator_z_proj_in(z[:, :-1]).contiguous()

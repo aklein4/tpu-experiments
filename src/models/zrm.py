@@ -254,7 +254,7 @@ class ZRMModel(BaseXLAModel):
             input_tokens=input_tokens,
             input_mask=input_mask,
             input_bias=input_bias,
-            z=(encoder_mu + noise)
+            z=noise
         )
         generator_mu = generator_mu_raw * alpha
 

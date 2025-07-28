@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def setup_sharding_and_mesh(
-  model: nn.Module, config: DictConfig
+  model: nn.Module, config: DictConfig, shard_model=True
 ) -> tuple[nn.Module, xs.ShardingSpec, bool]:
   """Sets up XLA mesh topology and applies SPMD sharding annotations to the model.
 
@@ -64,6 +64,7 @@ def setup_sharding_and_mesh(
   # the training across devices following the SPMD paradigm.
   sharding_config = OmegaConf.to_container(config.model.sharding, resolve=True)
   assert isinstance(sharding_config, dict)
-  model = shard_torch_xla_model_from_config(model, config=sharding_config)
+  if shard_model:
+    model = shard_torch_xla_model_from_config(model, config=sharding_config)
 
   return model, input_sharding_spec, minibatch

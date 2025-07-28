@@ -58,6 +58,7 @@ class ZRMTrainer(BaseTrainer):
             out['generator_mu']
         )
         aux['kl_per_token'] = per_token(kl, labels, pad_token_id)
+        aux['elbo'] = aux['lm_loss'] + aux['kl_per_token']
         w_kl = get_w_kl(kl)
 
         # kl with respect to the encoder and alpha
@@ -65,10 +66,13 @@ class ZRMTrainer(BaseTrainer):
             (self.step - self.config.trainer.enc_kl_start) / self.config.trainer.enc_kl_warmup,
             0.0, 1.0
         )
-        # enc_mu = out['alpha'] * scale_gradient(
-        #     out['encoder_mu_raw'], aux['enc_kl_scale']
-        # )
-        enc_mu = out['alpha'] * out['encoder_mu_raw'].detach()
+        # this will trigger a recompile, but that's fine because it's only once (we do it this way because of floating point precision issues)
+        if self.step > self.config.trainer.enc_kl_start:
+            enc_mu = out['alpha'] * scale_gradient(
+                out['encoder_mu_raw'], aux['enc_kl_scale']
+            )
+        else:
+            enc_mu = out['alpha'] * out['encoder_mu_raw'].detach()
         kl_enc = kl_div(
             enc_mu,
             out['generator_mu'].detach()

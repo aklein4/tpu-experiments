@@ -49,7 +49,6 @@ from torchprime.utils.parallelism_utils import lb_cp_enabled, reorder_sequence
 
 import wandb
 import huggingface_hub as hf
-import numpy as np
 
 from optimizers.adamw import AdamW
 from models.xla import BaseXLAModel
@@ -321,13 +320,8 @@ class BaseTrainer:
             def step_closure(
                 epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
             ):
-                all_mean = lambda x, n: xm.mesh_reduce(f"{n}_reduce", x, np.mean)
-
                 loss = loss.detach().item()
                 grad_norm = grad_norm.detach().item()
-
-                # mean the loss before logging
-                loss = all_mean(loss, "loss")
 
                 logger.info(
                     "Epoch: %.4f, step: %d, loss: %.4f, grad_norm: %.4f, lr: %.2e, trace time: %.2f ms",
@@ -351,9 +345,6 @@ class BaseTrainer:
                 to_wandb["lr"] = lr
                 to_wandb["epoch"] = epoch
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
-
-                for k, v in to_wandb.items():
-                    to_wandb[k] = all_mean(v, f'aux-{k}')
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb)
@@ -387,6 +378,14 @@ class BaseTrainer:
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         
         loss, aux = self.forward(batch)
+
+        mean_reduce = lambda x: xf.all_reduce(
+            xm.REDUCE_SUM, x, scale=1.0 / xr.process_count()
+        )
+        loss = mean_reduce(loss)
+        for k, v in aux.items():
+            if isinstance(v, torch.Tensor):
+                aux[k] = mean_reduce(v)
 
         loss.backward()
         xm.reduce_gradients(self.optimizer)

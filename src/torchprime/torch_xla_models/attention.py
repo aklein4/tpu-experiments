@@ -148,6 +148,7 @@ class AttentionModule(nn.Module):
             )
           return x
 
+        og_len = query_states.shape[-2]
         query_states = _pad(query_states, 512)
         key_states = _pad(key_states, 512)
         value_states = _pad(value_states, 512)
@@ -160,6 +161,8 @@ class AttentionModule(nn.Module):
           causal=True,
           partition_spec=self.partition_spec,
         )
+        attn_output = attn_output[:, :, :og_len, :]
+
       case _:
         attn_weights = torch.matmul(
           query_states, key_states.transpose(2, 3)

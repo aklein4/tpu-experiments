@@ -99,11 +99,6 @@ class BaseTrainer:
         # Add `xp.Trace` to linear layers in the module tree (just for profiling?).
         model = auto_trace(model)
 
-        # Setup mesh
-        model, self.input_sharding_spec, self.minibatch = setup_sharding_and_mesh(
-            model, config, shard_model=False
-        )
-
         # Mark pure modules in the model for optimization.
         model = mark_pure_modules(model, config)
 
@@ -236,7 +231,7 @@ class BaseTrainer:
             drop_last=True,
         )
         loader = pl.MpDeviceLoader(
-            dataloader, self.device, input_sharding=self.input_sharding_spec
+            dataloader, self.device, # input_sharding=self.input_sharding_spec
         )
         return loader
     

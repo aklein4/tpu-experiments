@@ -12,6 +12,8 @@ import omegaconf
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.distributed.xla_multiprocessing as xmp
+
 import transformers
 
 from torchprime.torch_xla_models.model import model_utils
@@ -105,4 +107,4 @@ if __name__ == "__main__":
         handlers=[logging.StreamHandler(sys.stdout)],
     )
     
-    sys.exit(main())
+    xmp.spawn(main,)

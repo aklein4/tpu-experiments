@@ -44,7 +44,7 @@ def main(config: omegaconf.DictConfig):
 
     # set up logging
     logger.setLevel(logging.INFO)
-    if constants.PROCESS_IS_MAIN():
+    if constants.PROCESS_IS_MAIN() or True:
         verbosity = logging.INFO 
     else:
         logging.disable(logging.CRITICAL)

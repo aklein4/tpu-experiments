@@ -22,6 +22,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.runtime as xr
+from torch_xla.core import functions as xf
 
 from omegaconf import DictConfig, OmegaConf
 
@@ -235,7 +236,7 @@ class BaseTrainer:
             drop_last=True,
         )
         loader = pl.MpDeviceLoader(
-            dataloader, self.device, input_sharding=self.input_sharding_spec
+            dataloader, self.device, # input_sharding=self.input_sharding_spec
         )
         return loader
     
@@ -378,7 +379,18 @@ class BaseTrainer:
         
         loss, aux = self.forward(batch)
 
+        loss = xm.reduce_mean(loss)
+
+        mean_reduce = lambda x: xf.all_reduce(
+            xm.REDUCE_SUM, x, scale=1.0 / xr.process_count()
+        )
+        loss = mean_reduce(loss)
+        for k, v in aux.items():
+            if isinstance(v, torch.Tensor):
+                aux[k] = mean_reduce(v)
+
         loss.backward()
+        xm.reduce_gradients(self.optimizer)
         
         gard_norm = self.clip_gradients()
         self.optimizer.step()

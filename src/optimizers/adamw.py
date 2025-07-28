@@ -3,6 +3,8 @@ from typing import Callable, Iterable, Tuple
 import torch
 from torch.optim import Optimizer
 
+import torch_xla.distributed.spmd as xs
+
 import math
 
 
@@ -35,6 +37,7 @@ class AdamW(Optimizer):
         weight_decay: float = 0.0,
         correct_bias: bool = True,
         update_clip: float = None,
+        sharding_spec: Tuple[str, ...] = None,
     ):
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
@@ -45,7 +48,15 @@ class AdamW(Optimizer):
         if not 0.0 <= eps:
             raise ValueError("Invalid epsilon value: {} - should be >= 0.0".format(eps))
         
-        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias, update_clip=update_clip)
+        defaults = dict(
+            lr=lr,
+            betas=betas,
+            eps=eps,
+            weight_decay=weight_decay,
+            correct_bias=correct_bias,
+            update_clip=update_clip,
+            sharding_spec=sharding_spec,
+        )
         
         super().__init__(params, defaults)
 
@@ -88,9 +99,18 @@ class AdamW(Optimizer):
                     state["exp_avg"] = torch.zeros_like(grad)
                     # Exponential moving average of squared gradient values
                     state["exp_avg_sq"] = torch.zeros_like(grad)
+
+                    # Sharding spec handling
+                    if group["sharding_spec"] is not None:
+                        the_mesh = xs.get_global_mesh()
+                        
+                        xs.mark_sharding(state["exp_avg"], the_mesh, group["sharding_spec"]).global_tensor
+                        xs.mark_sharding(state["exp_avg_sq"], the_mesh, group["sharding_spec"]).global_tensor
+
                 else:
-                    state["exp_avg"] = state["exp_avg"].to(grad)
-                    state["exp_avg_sq"] = state["exp_avg_sq"].to(grad)
+                    if group["sharding_spec"] is None:
+                        state["exp_avg"] = state["exp_avg"].to(grad)
+                        state["exp_avg_sq"] = state["exp_avg_sq"].to(grad)
 
                 exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
                 beta1, beta2 = group["betas"]

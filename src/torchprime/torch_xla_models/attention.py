@@ -140,7 +140,19 @@ class AttentionModule(nn.Module):
           default_block_sizes.update(self.kernel_config)
         FlashAttention.DEFAULT_BLOCK_SIZES = default_block_sizes
 
-        query_states /= math.sqrt(head_dim)
+        def _pad(x, l):
+          if x.shape[-2] % l != 0:
+            return torch.cat(
+              [x, torch.zeros_like(x[:, :, :(l - (x.shape[-2] % l)), :])],
+              dim=-2
+            )
+          return x
+
+        query_states = _pad(query_states, 512)
+        key_states = _pad(key_states, 512)
+        value_states = _pad(value_states, 512)
+
+        query_states = query_states / math.sqrt(head_dim)
         attn_output = flash_attention(
           query_states,
           key_states,

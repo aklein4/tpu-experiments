@@ -29,6 +29,7 @@ class ZRMTrainer(BaseTrainer):
 
     def forward(self, batch):
         pad_token_id = self.model.config.pad_token_id
+        labels = batch['output_ids']
 
         out = self.model(
             input_ids=batch['input_ids'],
@@ -36,11 +37,17 @@ class ZRMTrainer(BaseTrainer):
         )
 
         # handle LM
-        logits, labels = out['lm_logits'], batch['output_ids']
+        lm_losses = loss_utils.fast_lm_loss(
+            out['lm_logits'],
+            labels,
+            ignore_index=pad_token_id,
+            shift_labels=False,
+            shift_logits=False
+        )
         aux = {
-            'lm_loss': loss_utils.cross_entropy_loss(logits, labels, pad_token_id, shifted=True),
-            'acc': loss_utils.accuracy(logits, labels, pad_token_id, shifted=True),
-            'pcorr': loss_utils.pcorr(logits, labels, pad_token_id, shifted=True),
+            'lm_loss': lm_losses['loss'],
+            'acc': lm_losses['acc'],
+            'pcorr': lm_losses['pcorr'],
         
             'alpha': out['alpha'],
         }
@@ -90,9 +97,7 @@ class ZRMTrainer(BaseTrainer):
         loss = aux['lm_loss'] + kl_loss
 
         # check for NaNs
-        aux["nan_logits"] = (~torch.isfinite(out['lm_logits'])).any().float()
-        aux["nan_encoder_mu"] = (~torch.isfinite(out['encoder_mu'])).any().float()
-        aux["nan_generator_mu"] = (~torch.isfinite(out['generator_mu'])).any().float()
+        aux["nan_loss"] = (~torch.isfinite(loss)).any().float()
 
         return loss, aux
     

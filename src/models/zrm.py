@@ -284,6 +284,16 @@ class ZRMModel(BaseXLAModel):
         }
     
 
+    def _shift_right(self, x, first=0.0):
+        return torch.cat(
+            [
+                (x[:, :1] * 0) + first,
+                x[:, :-1]
+            ],
+            dim=-2
+        )
+    
+
     def encode(
         self,
         input_tokens: torch.Tensor,
@@ -312,15 +322,9 @@ class ZRMModel(BaseXLAModel):
             )
         )
 
-        z_states = torch.cat(
-            [
-                expand_to_batch(self.encoder_z_tokens[:1], input_tokens),
-                (
-                    unsqueeze_to_batch(self.encoder_z_tokens[1:], input_tokens) +
-                    self.encoder_noise_proj_in(noise[:, :-1])
-                )
-            ],
-            dim=-2
+        z_states = (
+            unsqueeze_to_batch(self.encoder_z_tokens, input_tokens) +
+            self.encoder_noise_proj_in(self._shift_right(noise))
         )
 
         encoder_states = torch.cat(
@@ -382,15 +386,9 @@ class ZRMModel(BaseXLAModel):
             input_tokens
         )
 
-        z_states = torch.cat(
-            [
-                expand_to_batch(self.generator_z_tokens[:1], input_tokens),
-                (
-                    unsqueeze_to_batch(self.generator_z_tokens[1:], input_tokens) +
-                    self.generator_z_proj_in(z[:, :-1])
-                )
-            ],
-            dim=-2
+        z_states = (
+            unsqueeze_to_batch(self.generator_z_tokens, input_tokens) +
+            self.generator_z_proj_in(self._shift_right(z))
         )
  
         generator_states = torch.cat(
@@ -459,12 +457,9 @@ class ZRMModel(BaseXLAModel):
 
         output_states = (
             unsqueeze_to_batch(self.decoder_output_emb, output_tokens) +
-            torch.cat(
-                [
-                    expand_to_batch(self.decoder_start_output_token[None], output_tokens[:, :-1]),
-                    output_tokens[:, :-1],
-                ],
-                dim=-2
+            self._shift_right(
+                output_tokens,
+                first=unsqueeze_to_batch(self.decoder_start_output_token[None], output_tokens[:, :1])
             )
         )
 

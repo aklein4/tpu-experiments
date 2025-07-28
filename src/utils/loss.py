@@ -6,20 +6,19 @@ from torch.nn import CrossEntropyLoss
 
 
 def fast_lm_loss(
-    hidden_states: torch.FloatTensor,
-    lm_head: torch.nn.Linear,
+    logits: torch.FloatTensor,
     labels: torch.LongTensor,
     ignore_index: int = -100,
-    shift: bool = True
+    shift_logits: bool = True,
+    shift_labels: bool = True
 ):
     
     # shift if needed
-    if shift:
-        hidden_states, labels = shift_tokens(hidden_states, labels)
+    if shift_logits:
+        logits = logits[..., :-1, :].contiguous()
+    if shift_labels:
+        labels = labels[..., 1:].contiguous()
 
-    # calculate the logits
-    logits: torch.FloatTensor = lm_head(hidden_states)
-    
     # reshape to remove batch dimension
     logits = logits.view(-1, logits.shape[-1])
     labels = labels.view(-1)

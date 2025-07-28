@@ -435,13 +435,14 @@ class LlamaForCausalLM(BaseXLAModel):
         input_ids: torch.LongTensor,
         labels: torch.LongTensor | None = None,
         attention_mask: torch.FloatTensor | None = None,
-        hidden_states_only: bool = False,
+        shift_states: bool = False,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         
         hidden_states = self.model(input_ids=input_ids, attention_mask=attention_mask)
 
-        if hidden_states_only:
-            return hidden_states
+        if shift_states:
+            # Shift the hidden states to the right for causal language modeling
+            hidden_states = hidden_states[..., :-1, :].contiguous()
 
         logits = self.lm_head(hidden_states)
         logits = logits.float()

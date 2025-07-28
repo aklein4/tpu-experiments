@@ -372,7 +372,7 @@ class BaseTrainer:
         logger.info("Finished training run")
 
 
-    @torch_xla.compile(full_graph=True)
+    # @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         
         with autocast(self.device):

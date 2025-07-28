@@ -120,7 +120,7 @@ class BaseTrainer:
         self.model = model
 
         # create optimizer and learning rate scheduler
-        self.optimizer = self._create_optimizer(config, model.parameters())
+        self.optimizer = type(self)._create_optimizer(config, model.parameters())
         self.lr_scheduler = get_scheduler(
             name=self.config.trainer.lr_scheduler.type,
             optimizer=self.optimizer,
@@ -150,7 +150,8 @@ class BaseTrainer:
         torch_xla.sync()
 
 
-    def _create_optimizer(self, config, model_parameters) -> torch.optim.Optimizer:
+    @staticmethod
+    def _create_optimizer(config, model_parameters) -> torch.optim.Optimizer:
         """Helper for optimizer initialization."""
         if config.trainer.optimizer.type not in (_ADAFACTOR, _ADAMW):
             raise ValueError(
@@ -168,7 +169,6 @@ class BaseTrainer:
                     config.trainer.optimizer.beta2,
                 ),
                 update_clip=config.trainer.optimizer.update_clip,
-                sharding_spec=self.input_sharding_spec,
             )
 
         elif config.trainer.optimizer.type == _ADAFACTOR:

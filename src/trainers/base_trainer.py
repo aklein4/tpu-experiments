@@ -368,10 +368,7 @@ class BaseTrainer:
                 run_async=True,
             )
         
-            if (
-                ((step+1) % self.config.trainer.checkpoint_interval == 0) or
-                ((step+1) in self.config.trainer.checkpoint_steps)
-            ):    
+            if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
 
         xm.wait_device_ops()

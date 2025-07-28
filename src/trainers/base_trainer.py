@@ -216,12 +216,7 @@ class BaseTrainer:
         #     )
 
         assert self.global_batch_size is not None
-        if self.minibatch:
-            # Each process loads the per-host batch size.
-            batch_size = self.global_batch_size // num_replicas
-        else:
-            # Each process will load the global batch, then discard the unneeded parts.
-            batch_size = self.global_batch_size
+        batch_size = self.global_batch_size // num_replicas
 
         # handle the collator
         collator_cls = import_class(self.config.data.collator_class, constants.COLLATOR_MODULE)

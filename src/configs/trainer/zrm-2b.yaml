@@ -41,3 +41,4 @@ enc_kl_start: 40000
 enc_kl_warmup: 80000
 
 kl_weight: 0.2
+mean_kl_weight: 0.2

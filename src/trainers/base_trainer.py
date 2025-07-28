@@ -278,7 +278,7 @@ class BaseTrainer:
 
     def train_loop(self) -> None:
         self.model.train()
-        self.model.zero_grad()
+        self.model.zero_grad(True)
 
         # For now we assume that we will never train for more than one epoch
         max_step = self.config.trainer.max_steps
@@ -394,7 +394,7 @@ class BaseTrainer:
         gard_norm = self.clip_gradients()
         self.optimizer.step()
         self.lr_scheduler.step()
-        self.model.zero_grad()
+        self.model.zero_grad(True)
 
         return loss, aux, gard_norm
 

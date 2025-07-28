@@ -2,6 +2,7 @@
 import os
 
 try:
+    import torch_xla.core.xla_model as xm
     import torch_xla.runtime as xr
     XLA_AVAILABLE = True
 except ImportError:
@@ -22,6 +23,8 @@ PROCESS_INDEX = lambda: xr.process_index()
 PROCESS_IS_MAIN = lambda: xr.process_index() == 0
 
 PROCESS_COUNT = lambda: xr.process_count()
+
+XLA_DEVICE = lambda: xm.xla_device()
 
 # local data path
 LOCAL_DATA_PATH = os.path.join(BASE_PATH, "local_data")

@@ -27,8 +27,7 @@ transformers.utils.check_min_version("4.39.3")
 logger = logging.getLogger(__name__)
 
 
-@hydra.main(version_base=None, config_path="configs", config_name="default")
-def main(index, config: omegaconf.DictConfig):
+def _mp_fn(index, config: omegaconf.DictConfig):
 
     # Validate the config to avoid misuse and feature combination
     # Adding any new feature should update the config validator to
@@ -98,7 +97,8 @@ def main(index, config: omegaconf.DictConfig):
     return 0
 
 
-if __name__ == "__main__":
+@hydra.main(version_base=None, config_path="configs", config_name="default")
+def main(config: omegaconf.DictConfig):
 
     # set up logging
     logging.basicConfig(
@@ -107,4 +107,10 @@ if __name__ == "__main__":
         handlers=[logging.StreamHandler(sys.stdout)],
     )
     
-    xmp.spawn(main,)
+    xmp.spawn(main, args=(config,))
+
+
+if __name__ == "__main__":
+    main()
+
+

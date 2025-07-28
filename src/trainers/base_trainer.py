@@ -304,7 +304,7 @@ class BaseTrainer:
             # when context parallel and load balance context parallel is enabled,
             # we will reorder the sequence here for each batch
             if lb_cp_enabled(self.config):
-                return {
+                batch = {
                     key: reorder_sequence(
                         tensor=value,
                         cp_size=self.config.ici_mesh.context,
@@ -391,12 +391,12 @@ class BaseTrainer:
         loss.backward()
         xm.reduce_gradients(self.optimizer)
         
-        gard_norm = self.clip_gradients()
+        grad_norm = self.clip_gradients()
         self.optimizer.step()
         self.lr_scheduler.step()
         self.model.zero_grad()
 
-        return loss, aux, gard_norm
+        return loss, aux, grad_norm
 
 
     def forward(self, batch: dict) -> tuple[torch.Tensor, dict]:

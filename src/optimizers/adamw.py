@@ -71,7 +71,7 @@ class AdamW(Optimizer):
                 grad = p.grad
 
                 # handle types
-                if grad.dtype in {torch.float16, torch.bfloat16}:
+                if grad.dtype in (torch.float16, torch.bfloat16):
                     grad = grad.float()
                 if grad.is_sparse:
                     raise RuntimeError("AdamW does not support sparse gradients.")
@@ -88,9 +88,6 @@ class AdamW(Optimizer):
                     state["exp_avg"] = torch.zeros_like(grad)
                     # Exponential moving average of squared gradient values
                     state["exp_avg_sq"] = torch.zeros_like(grad)
-                else:
-                    state["exp_avg"] = state["exp_avg"].to(grad)
-                    state["exp_avg_sq"] = state["exp_avg_sq"].to(grad)
 
                 exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
                 beta1, beta2 = group["betas"]

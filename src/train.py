@@ -11,7 +11,7 @@ import hydra
 import omegaconf
 import torch
 import torch_xla
-import torch_xla.runtime as xr
+import torch_xla.core.xla_model as xm
 import transformers
 
 from torchprime.torch_xla_models.model import model_utils
@@ -23,9 +23,6 @@ from utils.import_utils import import_class
 
 transformers.utils.check_min_version("4.39.3")
 logger = logging.getLogger(__name__)
-
-xr.use_spmd()
-assert xr.is_spmd() is True
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="default")
@@ -71,6 +68,13 @@ def main(config: omegaconf.DictConfig):
     # print model information
     model_utils.log_parameter_breakdown(model, logger)
     logger.info(f"Model initialized: {config.model.model_class}")
+
+    # sync the model to the XLA device
+    logger.info("Syncing model to XLA device...")
+    model = model.to(constants.XLA_DEVICE())
+    if not config.debug:
+        xm.broadcast_master_param(model)
+    logger.info("Model synced to XLA device!")
 
     # Create the dataset
     data = get_dataset(**config.data.dataset)

@@ -11,15 +11,17 @@ checkpoint_interval: 2500  # Save a checkpoint every N steps
 
 # Optimizer configuration.
 optimizer:
-  type: adafactor # adamw
+  type: adamw
 
   learning_rate: 1.0e-4
   weight_decay: 0.1
 
-  # beta1: 0.9
-  # beta2: 0.95
+  beta1: 0.9
+  beta2: 0.95
 
-  # update_clip: 3.0
+  update_clip: 3.0
+
+  state_dtype: bfloat16  # Use bfloat16 for optimizer states to save memory
 
 
 # Learning rate scheduler configuration.

@@ -24,6 +24,10 @@ class AdamW(Optimizer):
             Decoupled weight decay to apply.
         correct_bias (:obj:`bool`, `optional`, defaults to `True`):
             Whether ot not to correct bias in Adam (for instance, in Bert TF repository they use :obj:`False`).
+        update_clip (:obj:`float`, `optional`, defaults to `None`):
+            If specified, clips the update to this value.
+        state_dtype (:obj:`torch.dtype`, `optional`, defaults to `float32`):
+            The dtype to use for the optimizer state.
     """
 
     def __init__(
@@ -35,6 +39,7 @@ class AdamW(Optimizer):
         weight_decay: float = 0.0,
         correct_bias: bool = True,
         update_clip: float = None,
+        state_dtype: str = "float32"
     ):
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
@@ -45,9 +50,31 @@ class AdamW(Optimizer):
         if not 0.0 <= eps:
             raise ValueError("Invalid epsilon value: {} - should be >= 0.0".format(eps))
         
-        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias, update_clip=update_clip)
+        state_dtype = getattr(torch, state_dtype)
+
+        defaults = dict(
+            lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias,
+            update_clip=update_clip,
+            state_dtype=state_dtype
+        )
         
         super().__init__(params, defaults)
+
+
+    @torch.no_grad()
+    def preload(self):
+        for group in self.param_groups:
+            for p in group["params"]:
+                
+                state = self.state[p]
+
+                # State initialization
+                if len(state) == 0:
+                    state["step"] = 0
+                    # Exponential moving average of gradient values
+                    state["exp_avg"] = torch.zeros_like(p, dtype=group["state_dtype"])
+                    # Exponential moving average of squared gradient values
+                    state["exp_avg_sq"] = torch.zeros_like(p, dtype=group["state_dtype"])
 
 
     @torch.no_grad()
@@ -71,8 +98,7 @@ class AdamW(Optimizer):
                 grad = p.grad
 
                 # handle types
-                if grad.dtype in (torch.float16, torch.bfloat16):
-                    grad = grad.float()
+                grad = grad.to(group["state_dtype"])
                 if grad.is_sparse:
                     raise RuntimeError("AdamW does not support sparse gradients.")
 
@@ -110,7 +136,7 @@ class AdamW(Optimizer):
                 if group["update_clip"] is not None:
                     update = torch.clamp(update, -group["update_clip"], group["update_clip"])
 
-                p.add_(update, alpha=-step_size)
+                p.add_(update.to(p.dtype), alpha=-step_size)
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,

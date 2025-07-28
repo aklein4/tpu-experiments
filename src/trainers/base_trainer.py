@@ -23,6 +23,7 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.runtime as xr
 from torch_xla.core import functions as xf
+from torch_xla.amp import autocast
 
 from omegaconf import DictConfig, OmegaConf
 
@@ -98,10 +99,7 @@ class BaseTrainer:
         # Add `xp.Trace` to linear layers in the module tree (just for profiling?).
         model = auto_trace(model)
 
-        # Setup SPMD mesh and shard the model.
-        model, self.input_sharding_spec, self.minibatch = setup_sharding_and_mesh(
-            model, config
-        )
+        # Mark pure modules in the model for optimization.
         model = mark_pure_modules(model, config)
 
         try:
@@ -122,6 +120,8 @@ class BaseTrainer:
 
         # create optimizer and learning rate scheduler
         self.optimizer = type(self)._create_optimizer(config, model.parameters())
+        if hasattr(self.optimizer, "preload"):
+            self.optimizer.preload()
         self.lr_scheduler = get_scheduler(
             name=self.config.trainer.lr_scheduler.type,
             optimizer=self.optimizer,
@@ -171,6 +171,7 @@ class BaseTrainer:
                     config.trainer.optimizer.beta2,
                 ),
                 update_clip=config.trainer.optimizer.update_clip,
+                state_dtype=self.trainer.optimizer.state_dtype,
             )
 
         elif config.trainer.optimizer.type == _ADAFACTOR:
@@ -275,8 +276,11 @@ class BaseTrainer:
     
 
     def train_loop(self) -> None:
+
+        for p in self.model.parameters():
+            p.requires_grad_(True)
         self.model.train()
-        self.model.zero_grad()
+        self.model.zero_grad(True)
 
         # For now we assume that we will never train for more than one epoch
         max_step = self.config.trainer.max_steps
@@ -376,7 +380,8 @@ class BaseTrainer:
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         
-        loss, aux = self.forward(batch)
+        with autocast(self.device):
+            loss, aux = self.forward(batch)
 
         mean_reduce = lambda x: xf.all_reduce(
             xm.REDUCE_SUM, x, scale=1.0 / xr.process_count()
@@ -391,13 +396,9 @@ class BaseTrainer:
         
         grad_norm = self.clip_gradients()
 
-        for p in self.model.parameters():
-            if p.grad is not None:
-                p.grad = torch.nan_to_num(p.grad, nan=0.0, posinf=0.0, neginf=0.0)
         self.optimizer.step()
-
         self.lr_scheduler.step()
-        self.model.zero_grad()
+        self.model.zero_grad(True)
 
         return loss, aux, grad_norm
 

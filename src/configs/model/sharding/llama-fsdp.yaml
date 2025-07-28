@@ -7,8 +7,8 @@ model.layers.*.mlp.down_proj.weight: [null, fsdp]
 model.layers.*.input_layernorm.weight: [fsdp]
 model.layers.*.post_attention_layernorm.weight: [fsdp]
 model.norm.weight: [fsdp]
-lm_head.weight: [fsdp, null]
+lm_head.weight: [null, null]
 
 # Activations
 model.layers.*: [[data, fsdp], null, null]
-lm_head: [[data, fsdp], null, null]
+# lm_head: [[data, fsdp], null, null]

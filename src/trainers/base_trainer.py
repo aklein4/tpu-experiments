@@ -378,13 +378,13 @@ class BaseTrainer:
         with autocast(self.device):
             loss, aux = self.forward(batch)
 
-        mean_reduce = lambda x: xf.all_reduce(
-            xm.REDUCE_SUM, x, scale=1.0 / xr.process_count()
-        )
-        loss = mean_reduce(loss)
-        for k, v in aux.items():
-            if isinstance(v, torch.Tensor):
-                aux[k] = mean_reduce(v)
+        # mean_reduce = lambda x: xf.all_reduce(
+        #     xm.REDUCE_SUM, x, scale=1.0 / xr.process_count()
+        # )
+        # loss = mean_reduce(loss)
+        # for k, v in aux.items():
+        #     if isinstance(v, torch.Tensor):
+        #         aux[k] = mean_reduce(v)
 
         loss.backward()
         xm.reduce_gradients(self.optimizer)

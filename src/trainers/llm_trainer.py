@@ -9,22 +9,20 @@ class LLMTrainer(BaseTrainer):
         pad_token_id = self.model.config.pad_token_id
 
         logits, _ = self.model(
-            input_ids=input_ids,
-            shift_states=True
+            input_ids=input_ids
         )
 
-        losses = loss_utils.fast_lm_loss(
-            logits=logits,
-            labels=input_ids,
+        shift_logits, shift_labels = loss_utils.shift_tokens(logits, input_ids)
+
+        loss = loss_utils.cross_entropy_loss(
+            shift_logits, shift_labels,
             ignore_index=pad_token_id,
-            shift_logits=False,
-            shift_labels=True
+            shifted=True
         )
 
-        loss = losses["loss"]
         aux = {
-            "acc": losses["acc"],
-            "pcorr": losses["pcorr"]
+            'acc': loss_utils.accuracy(shift_logits, shift_labels, pad_token_id, shifted=True),
+            'pcorr': loss_utils.pcorr(shift_logits, shift_labels, pad_token_id, shifted=True),
         }
 
         return loss, aux

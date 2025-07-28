@@ -71,10 +71,9 @@ class AdamW(Optimizer):
                 grad = p.grad
 
                 # handle types
-                if grad.dtype in {torch.float16, torch.bfloat16}:
-                    grad = grad.float()
                 if grad.is_sparse:
                     raise RuntimeError("AdamW does not support sparse gradients.")
+                grad = grad.to(torch.bfloat16)
 
                 # handle nan gradients
                 grad = torch.nan_to_num(grad, nan=0.0, posinf=0.0, neginf=0.0)
@@ -113,7 +112,7 @@ class AdamW(Optimizer):
                 if group["update_clip"] is not None:
                     update = torch.clamp(update, -group["update_clip"], group["update_clip"])
 
-                p.add_(update, alpha=-step_size)
+                p.add_(update.to(p.dtype), alpha=-step_size)
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,

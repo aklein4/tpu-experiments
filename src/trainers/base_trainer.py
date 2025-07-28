@@ -379,8 +379,6 @@ class BaseTrainer:
         
         loss, aux = self.forward(batch)
 
-        loss = xm.reduce_mean(loss)
-
         mean_reduce = lambda x: xf.all_reduce(
             xm.REDUCE_SUM, x, scale=1.0 / xr.process_count()
         )

@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 @hydra.main(version_base=None, config_path="configs", config_name="default")
-def main(config: omegaconf.DictConfig):
+def main(index, config: omegaconf.DictConfig):
 
     # Validate the config to avoid misuse and feature combination
     # Adding any new feature should update the config validator to

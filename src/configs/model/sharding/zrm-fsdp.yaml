@@ -71,7 +71,8 @@ decoder_z_proj_in.weight: [fsdp, null]
 log_alpha: [fsdp]
 
 # Activations
-encoder.layers.*: [[data, fsdp], null, null]
-generator.layers.*: [[data, fsdp], null, null]
-decoder.layers.*: [[data, fsdp], null, null]
-lm_head: [[data, fsdp], null, null]
+# encoder.layers.*: [[data, fsdp], null, null]
+# generator.layers.*: [[data, fsdp], null, null]
+# decoder.layers.*: [[data, fsdp], null, null]
+# lm_head: [[data, fsdp], null, null]
+'': [[data, fsdp], null, null]

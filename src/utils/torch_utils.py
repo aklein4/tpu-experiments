@@ -44,3 +44,18 @@ def expand_to_batch(x, target):
     )
 
     return x
+
+
+class FakeModule(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+
+    def forward(
+        self,
+        fn,
+        *args,
+        **kwargs
+    ):
+        return fn(*args, **kwargs)

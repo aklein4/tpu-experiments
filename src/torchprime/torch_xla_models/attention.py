@@ -159,7 +159,7 @@ class AttentionModule(nn.Module):
           key_states,
           value_states,
           causal=True,
-          partition_spec=self.partition_spec,
+          # partition_spec=self.partition_spec,
         )
         attn_output = attn_output[:, :, :og_len, :]
 

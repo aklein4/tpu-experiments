@@ -391,22 +391,11 @@ class BaseTrainer:
         loss.backward()
         # xm.reduce_gradients(self.optimizer)
         
-        # grad_norm = self.clip_gradients()
+        grad_norm = self.clip_gradients()
         # self.optimizer.step()
-        optimizer_args = {}
-        max_grad_norm = self.config.trainer.get("max_grad_norm")
-        if max_grad_norm is not None and max_grad_norm > 0:
-            optimizer_args["clipping_specs"] = [
-                (self.model.parameters(), {"clip_val": max_grad_norm})
-            ]
-
-        xm.optimizer_step(self.optimizer, barrier=True, optimizer_args=optimizer_args)
+        xm.optimizer_step(self.optimizer, barrier=True)
         self.lr_scheduler.step()
         self.model.zero_grad()
-
-        # TODO(aklein): This is not the true grad norm, just the clip value.
-        # We can compute it separately if needed, but it adds another all-reduce.
-        grad_norm = torch.tensor(max_grad_norm or 0.0, device=self.device)
 
         return loss, aux, grad_norm
 

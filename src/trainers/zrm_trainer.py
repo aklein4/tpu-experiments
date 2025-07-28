@@ -28,6 +28,8 @@ def per_token(x, labels, pad_token_id):
 class ZRMTrainer(BaseTrainer):
 
     def forward(self, batch):
+        print("BS:", batch['input_ids'].shape, batch['output_ids'].shape, flush=True)
+
         pad_token_id = self.model.config.pad_token_id
         labels = batch['output_ids']
 

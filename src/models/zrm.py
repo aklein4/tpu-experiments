@@ -11,8 +11,7 @@ from models.llama import LlamaModel
 from utils.torch_utils import (
     scale_gradient,
     expand_to_batch,
-    unsqueeze_to_batch,
-    FakeModule
+    unsqueeze_to_batch
 )
 
 
@@ -188,11 +187,6 @@ class ZRMModel(BaseXLAModel):
         # scaling components
         self.log_alpha = nn.Parameter(torch.tensor([0.0] * 64))
 
-        # fake module for checkpointing
-        self.encoder.fake_encoder = FakeModule()
-        self.generator.fake_generator = FakeModule()
-        self.decoder.fake_decoder = FakeModule()
-
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
 
@@ -240,8 +234,7 @@ class ZRMModel(BaseXLAModel):
         )
 
         # run the encoder
-        encoder_mu_raw = self.encoder.fake_encoder(
-            self.encode,
+        encoder_mu_raw = self.encode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             input_mask=input_mask,
@@ -258,8 +251,7 @@ class ZRMModel(BaseXLAModel):
         encoder_mu = encoder_mu_raw * alpha
 
         # run the generator
-        generator_mu_raw = self.generator.fake_generator(
-            self.generate,
+        generator_mu_raw = self.generate(
             input_tokens=input_tokens,
             input_mask=input_mask,
             input_bias=input_bias,
@@ -272,8 +264,7 @@ class ZRMModel(BaseXLAModel):
             encoder_mu,
             z_grad_scale,
         ) + noise
-        lm_logits = self.decoder.fake_decoder(
-            self.decode,
+        lm_logits = self.decode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             input_mask=input_mask,

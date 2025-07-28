@@ -1,7 +1,7 @@
 defaults:
   - _self_  # refers to this config file
   - sharding: zrm-fsdp  # refers to sharding/llama-fsdp.yaml
-  - remat: zrm-scan  # refers to remat/llama-scan.yaml
+  - remat: zrm-scan-offload  # refers to remat/llama-scan.yaml
 
 
 model_id: zrm-2b

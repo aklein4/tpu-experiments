@@ -30,15 +30,17 @@ def unsqueeze_to_batch(x, target):
 
 
 def expand_to_batch(x, target):
-    og_shape = x.shape
 
     num_unsqueeze = 0
     while x.dim() < target.dim():
         x = x[None]
         num_unsqueeze += 1
 
-    x = x.expand(
-        *([target.shape[i] for i in range(num_unsqueeze)] + list(og_shape))
+    x = x.repeat(
+        *(
+            [target.shape[i] for i in range(num_unsqueeze)] +
+            [1] * (x.dim() - num_unsqueeze)
+        )
     )
 
     return x

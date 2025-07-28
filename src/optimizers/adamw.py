@@ -77,8 +77,7 @@ class AdamW(Optimizer):
                     raise RuntimeError("AdamW does not support sparse gradients.")
 
                 # handle nan gradients
-                # grad = torch.nan_to_num(grad, nan=0.0, posinf=0.0, neginf=0.0)
-                grad = torch.where(~torch.isfinite(grad), torch.zeros_like(grad), grad)
+                grad = torch.nan_to_num(grad, nan=0.0, posinf=0.0, neginf=0.0)
 
                 state = self.state[p]
 

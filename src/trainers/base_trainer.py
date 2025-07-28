@@ -365,7 +365,7 @@ class BaseTrainer:
                     trace_end_time,
                     self.lr_scheduler.get_last_lr()[0],
                 ),
-                run_async=False,
+                run_async=True,
             )
         
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    

@@ -6,7 +6,9 @@ global_batch_size: 512
 max_steps: 80000
 
 # checkpointing configuration
-checkpoint_interval: 2500  # Save a checkpoint every N steps
+checkpoint_interval: 5000  # Save a checkpoint every N steps
+checkpoint_steps:
+ - 10
 # convert_to_safetensors: true  # Convert the model to safetensors format when saving
 
 # Optimizer configuration.

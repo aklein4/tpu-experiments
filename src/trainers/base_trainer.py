@@ -145,6 +145,7 @@ class BaseTrainer:
                 project=self.config.project,
                 name=self.config.name,
                 notes=self.config.notes,
+                config=OmegaConf.to_container(self.config, resolve=True),
             )
 
         # Execute all initialization work queued so far before starting training.

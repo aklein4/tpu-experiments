@@ -107,7 +107,7 @@ def main(config: omegaconf.DictConfig):
         handlers=[logging.StreamHandler(sys.stdout)],
     )
     
-    xmp.spawn(main, args=(config,))
+    xmp.spawn(_mp_fn, args=(config,))
 
 
 if __name__ == "__main__":

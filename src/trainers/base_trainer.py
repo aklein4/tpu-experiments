@@ -174,15 +174,13 @@ class BaseTrainer:
             )
 
         elif config.trainer.optimizer.type == _ADAFACTOR:
-            # Adafactor optimizer does not support weight decay.
-            if "weight_decay" in config.trainer.optimizer:
-                raise ValueError("Adafactor does not support weight decay.")
 
             optimizer = Adafactor(
                 params=model_parameters,
                 lr=config.trainer.optimizer.learning_rate,
                 relative_step=False,
                 scale_parameter=False,
+                weight_decay=config.trainer.optimizer.weight_decay,
             )
 
         else:
@@ -375,7 +373,7 @@ class BaseTrainer:
         logger.info("Finished training run")
 
 
-    @torch_xla.compile(full_graph=False)
+    @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         
         loss, aux = self.forward(batch)
@@ -389,11 +387,15 @@ class BaseTrainer:
                 aux[k] = mean_reduce(v)
 
         loss.backward()
-        # xm.reduce_gradients(self.optimizer)
+        xm.reduce_gradients(self.optimizer)
         
         grad_norm = self.clip_gradients()
-        # self.optimizer.step()
-        xm.optimizer_step(self.optimizer, barrier=True)
+
+        for p in self.model.parameters():
+            if p.grad is not None:
+                p.grad = torch.nan_to_num(p.grad, nan=0.0, posinf=0.0, neginf=0.0)
+        self.optimizer.step()
+
         self.lr_scheduler.step()
         self.model.zero_grad()
 

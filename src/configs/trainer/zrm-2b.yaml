@@ -11,15 +11,15 @@ checkpoint_interval: 2500  # Save a checkpoint every N steps
 
 # Optimizer configuration.
 optimizer:
-  type: adamw
+  type: adafactor # adamw
 
   learning_rate: 1.0e-4
   weight_decay: 0.1
 
-  beta1: 0.9
-  beta2: 0.95
+  # beta1: 0.9
+  # beta2: 0.95
 
-  update_clip: 3.0
+  # update_clip: 3.0
 
 
 # Learning rate scheduler configuration.
@@ -27,7 +27,7 @@ lr_scheduler:
   type: linear
 
   warmup_steps: 1000
-  training_steps: 1000000
+  training_steps: 10000000
   
 
 # Defaults to clip the L2 norm of gradients to 1.0.
@@ -37,8 +37,8 @@ max_grad_norm: 1.0
 # Set to a number to clip gradients by the specified max absolute value.
 max_grad_value: null
 
-enc_kl_start: 40000
-enc_kl_warmup: 80000
+enc_kl_start: 5000
+enc_kl_warmup: 5000
 
 kl_weight: 0.2
 mean_kl_weight: 0.2

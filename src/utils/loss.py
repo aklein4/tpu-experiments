@@ -17,12 +17,14 @@ def fast_lm_loss(
     if shift:
         hidden_states, labels = shift_tokens(hidden_states, labels)
 
-    # reshape to remove batch dimension
-    hidden_states = hidden_states.view(-1, hidden_states.shape[-1])
-    labels = labels.view(-1)
-
-    # calculate the logits and mask
+    # calculate the logits
     logits: torch.FloatTensor = lm_head(hidden_states)
+    
+    # reshape to remove batch dimension
+    logits = logits.view(-1, logits.shape[-1])
+    labels = labels.view(-1)
+    
+    # calculate the mask
     mask = labels != ignore_index
     mask_sum = mask.float().sum()
 

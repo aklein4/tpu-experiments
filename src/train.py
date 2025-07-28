@@ -12,6 +12,7 @@ import omegaconf
 import torch
 import torch_xla
 import torch_xla.core.xla_model as xm
+import torch_xla.runtime as xr
 import torch_xla.distributed.xla_multiprocessing as xmp
 
 import transformers
@@ -29,10 +30,33 @@ logger = logging.getLogger(__name__)
 
 def _mp_fn(index, config: omegaconf.DictConfig):
 
+    # set up logging
+    logging.basicConfig(
+        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+        datefmt="%m/%d/%Y %H:%M:%S",
+        handlers=[logging.StreamHandler(sys.stdout)],
+    )
+
     # Validate the config to avoid misuse and feature combination
     # Adding any new feature should update the config validator to
     # ensure different features can be combined together
     config_vaidator(config)
+
+    mess = "\n ========= INFO ========= \n"
+    mess += f"device_type: {xr.device_type()}\n"
+    mess += f"process_index: {xr.process_index()}\n"
+    mess += f"local_process_count: {xr.local_process_count()}\n"
+    mess += f"local_device_count: {xr.local_device_count()}\n"
+    mess += f"addressable_device_count: {xr.addressable_device_count()}\n"
+    mess += f"glocal_device_count: {xr.global_device_count()}\n"
+    mess += f"global_runtime_device_count: {xr.global_runtime_device_count()}\n"
+    mess += f"world_size: {xr.world_size()}\n"
+    mess += f"global_ordinal: {xr.global_ordinal()}\n"
+    mess += f"local_ordinal: {xr.local_ordinal()}\n"
+    mess += f"is_master_ordinal (local): {torch_xla.core.xla_model.is_master_ordinal(local=True)}\n"
+    mess += f"is_master_ordinal (global): {torch_xla.core.xla_model.is_master_ordinal(local=False)}\n"
+    mess += " ========================= "
+    print(mess, flush=True)
 
     # Print the config for debugging
     if constants.PROCESS_IS_MAIN():
@@ -100,13 +124,6 @@ def _mp_fn(index, config: omegaconf.DictConfig):
 @hydra.main(version_base=None, config_path="configs", config_name="default")
 def main(config: omegaconf.DictConfig):
 
-    # set up logging
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-        datefmt="%m/%d/%Y %H:%M:%S",
-        handlers=[logging.StreamHandler(sys.stdout)],
-    )
-    
     xmp.spawn(_mp_fn, args=(config,))
 
 

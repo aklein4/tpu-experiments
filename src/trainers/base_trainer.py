@@ -171,7 +171,7 @@ class BaseTrainer:
                     config.trainer.optimizer.beta2,
                 ),
                 update_clip=config.trainer.optimizer.update_clip,
-                state_dtype=self.trainer.optimizer.state_dtype,
+                state_dtype=config.trainer.optimizer.state_dtype,
             )
 
         elif config.trainer.optimizer.type == _ADAFACTOR:

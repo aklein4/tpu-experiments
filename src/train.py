@@ -97,8 +97,8 @@ def _mp_fn(index, config: omegaconf.DictConfig):
     # sync the model to the XLA device
     logger.info("Syncing model to XLA device...")
     model = model.to(constants.XLA_DEVICE())
-    if not config.debug:
-        xm.broadcast_master_param(model)
+    # if not config.debug:
+    #     xm.broadcast_master_param(model)
     logger.info("Model synced to XLA device!")
 
     # Create the dataset

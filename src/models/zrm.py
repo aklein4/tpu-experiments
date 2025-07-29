@@ -206,7 +206,8 @@ class ZRMModel(BaseXLAModel):
         self,
         input_ids: torch.LongTensor,
         output_ids: torch.LongTensor,
-        z_grad_scale: float = 1.0,
+        gen_grad_scale: float = 1.0,
+        lm_grad_scale: float = 1.0,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         assert input_ids.shape[-1] == self.input_length
         assert output_ids.shape[-1] == self.output_length
@@ -249,18 +250,22 @@ class ZRMModel(BaseXLAModel):
         encoder_mu = encoder_mu_raw * alpha
 
         # run the generator
+        gen_z = scale_gradient(
+            encoder_mu,
+            gen_grad_scale,
+        ) + noise
         generator_mu_raw = self.generate(
             input_tokens=input_tokens,
             input_mask=input_mask,
             input_bias=input_bias,
-            z=(encoder_mu + noise)
+            z=gen_z
         )
         generator_mu = generator_mu_raw * alpha
 
         # run the decoder   
         decoder_z = scale_gradient(
             encoder_mu,
-            z_grad_scale,
+            lm_grad_scale,
         ) + noise
         lm_logits = self.decode(
             input_tokens=input_tokens,

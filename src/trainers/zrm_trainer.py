@@ -67,12 +67,9 @@ class ZRMTrainer(BaseTrainer):
             0.0, 1.0
         )
         # this will trigger a recompile, but that's fine because it's only once (we do it this way because of floating point precision issues)
-        if self.step > self.config.trainer.enc_kl_start:
-            enc_mu = out['alpha'] * scale_gradient(
-                out['encoder_mu_raw'], aux['enc_kl_scale']
-            )
-        else:
-            enc_mu = out['alpha'] * out['encoder_mu_raw'].detach()
+        enc_mu = out['alpha'] * scale_gradient(
+            out['encoder_mu_raw'], aux['enc_kl_scale']
+        )
         kl_enc = kl_div(
             enc_mu,
             out['generator_mu'].detach()
@@ -80,22 +77,24 @@ class ZRMTrainer(BaseTrainer):
         aux["enc_kl_per_token"] = per_token(kl_enc, labels, pad_token_id)
 
         # kl with respect to the generator
+        aux['w_interp'] = np.clip(
+            self.step / self.config.trainer.enc_kl_start,
+            0.0, 1.0
+        )
         kl_gen = kl_div(
             out['encoder_mu'].detach(),
             out['alpha'].detach() * out['generator_mu_raw']
-        ) * w_kl
+        )
+        kl_gen = kl_gen * (
+            aux['w_interp'] * w_kl +
+            (1 - aux['w_interp'])
+        )
         aux["gen_kl_per_token"] = per_token(kl_gen, labels, pad_token_id)
 
         # kl with respect to the mean of the encoder mu
-        aux['mean_kl_weight_scaled'] = self.config.trainer.mean_kl_weight * (
-            1 - np.clip(
-                self.step / self.config.trainer.enc_kl_start,
-                0.0, 1.0
-            )
-        )
         kl_mean = kl_div(
-            (out['encoder_mu_raw'] * out['alpha'].detach()),
-            (out['encoder_mu_raw'] * out['alpha'].detach()).mean(dim=0, keepdim=True)
+            out['encoder_mu'],
+            out['encoder_mu'].mean(dim=0, keepdim=True)
         )
         aux["mean_kl_per_token"] = per_token(kl_mean, labels, pad_token_id)
 
@@ -103,7 +102,6 @@ class ZRMTrainer(BaseTrainer):
         kl_loss = (
             self.config.trainer.kl_weight * aux["enc_kl_per_token"] +
             aux["gen_kl_per_token"] +
-            aux['mean_kl_weight_scaled'] * (-aux["mean_kl_per_token"])
         )
         loss = aux['lm_loss'] + kl_loss
 

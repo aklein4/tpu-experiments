@@ -35,6 +35,7 @@ class AdamW(Optimizer):
         weight_decay: float = 0.0,
         correct_bias: bool = True,
         update_clip: float = None,
+        state_dtype: torch.dtype = torch.bfloat16
     ):
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
@@ -45,9 +46,25 @@ class AdamW(Optimizer):
         if not 0.0 <= eps:
             raise ValueError("Invalid epsilon value: {} - should be >= 0.0".format(eps))
         
-        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias, update_clip=update_clip)
+        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias, update_clip=update_clip, state_dtype=state_dtype)
         
         super().__init__(params, defaults)
+
+
+    @torch.no_grad()
+    def preload(self):
+        for group in self.param_groups:
+            for p in group["params"]:
+                
+                state = self.state[p]
+
+                # State initialization
+                if len(state) == 0:
+                    state["step"] = 0
+                    # Exponential moving average of gradient values
+                    state["exp_avg"] = torch.zeros_like(p, dtype=group["state_dtype"])
+                    # Exponential moving average of squared gradient values
+                    state["exp_avg_sq"] = torch.zeros_like(p, dtype=group["state_dtype"])
 
 
     @torch.no_grad()
@@ -73,7 +90,7 @@ class AdamW(Optimizer):
                 # handle types
                 if grad.is_sparse:
                     raise RuntimeError("AdamW does not support sparse gradients.")
-                grad = grad.to(torch.bfloat16)
+                grad = grad.to(group["state_dtype"])
 
                 # handle nan gradients
                 grad = torch.nan_to_num(grad, nan=0.0, posinf=0.0, neginf=0.0)
@@ -87,9 +104,6 @@ class AdamW(Optimizer):
                     state["exp_avg"] = torch.zeros_like(grad)
                     # Exponential moving average of squared gradient values
                     state["exp_avg_sq"] = torch.zeros_like(grad)
-                else:
-                    state["exp_avg"] = state["exp_avg"].to(grad)
-                    state["exp_avg_sq"] = state["exp_avg_sq"].to(grad)
 
                 exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
                 beta1, beta2 = group["betas"]

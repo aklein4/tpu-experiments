@@ -122,6 +122,10 @@ class BaseTrainer:
 
         # create optimizer and learning rate scheduler
         self.optimizer = type(self)._create_optimizer(config, model.parameters())
+        if hasattr(self.optimizer, "preload"):
+            logger.info("Preloading optimizer state")
+            self.optimizer.preload()
+        
         self.lr_scheduler = get_scheduler(
             name=self.config.trainer.lr_scheduler.type,
             optimizer=self.optimizer,
@@ -277,8 +281,11 @@ class BaseTrainer:
     
 
     def train_loop(self) -> None:
+
+        for p in self.model.parameters():
+            p.requires_grad_(True)
         self.model.train()
-        self.model.zero_grad()
+        self.model.zero_grad(True)
 
         # For now we assume that we will never train for more than one epoch
         max_step = self.config.trainer.max_steps
@@ -365,7 +372,7 @@ class BaseTrainer:
                     trace_end_time,
                     self.lr_scheduler.get_last_lr()[0],
                 ),
-                run_async=False,
+                run_async=True,
             )
         
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
@@ -394,7 +401,7 @@ class BaseTrainer:
         gard_norm = self.clip_gradients()
         self.optimizer.step()
         self.lr_scheduler.step()
-        self.model.zero_grad()
+        self.model.zero_grad(True)
 
         return loss, aux, gard_norm
 

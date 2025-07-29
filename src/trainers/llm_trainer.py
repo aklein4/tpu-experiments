@@ -25,6 +25,9 @@ class LLMTrainer(BaseTrainer):
         aux = {
             'acc': losses['acc'],
             'pcorr': losses['pcorr'],
+
+            # check for NaNs
+            'nan_loss': (~torch.isfinite(loss)).any().float(),
         }
 
         return loss, aux

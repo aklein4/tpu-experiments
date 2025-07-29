@@ -277,7 +277,7 @@ class BaseTrainer:
             )
             logger.info(f"Uploaded checkpoint to {self.repo_name}/{out_path}")
 
-        shutil.rmtree(save_path, ignore_errors=True)
+            shutil.rmtree(save_path, ignore_errors=True)
         
         xm.rendezvous(f"checkpoint_saved_{step}")
         logger.info("[SAVING] Finished distributed checkpoint.")      

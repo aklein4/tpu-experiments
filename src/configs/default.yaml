@@ -12,7 +12,7 @@ defaults:
 
 # compute configuration
 seed: 42
-torch_dtype: float32
+torch_dtype: float32 # must be float32 for now
 
 
 # logging and saving configuration

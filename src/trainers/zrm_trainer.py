@@ -30,6 +30,7 @@ class ZRMTrainer(BaseTrainer):
     def forward(self, batch):
         pad_token_id = self.model.config.pad_token_id
         labels = batch['output_ids']
+        print(f"labels: {labels.shape}", flush=True)
 
         out = self.model(
             input_ids=batch['input_ids'],

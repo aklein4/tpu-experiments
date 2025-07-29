@@ -91,39 +91,44 @@ class ZRMModel(BaseXLAModel):
         self.z_length = config.z_length
         
         # transformers
-        self.encoder = LlamaModel(config)
-        self.generator = LlamaModel(config)
-        self.decoder = LlamaModel(config)
+        # self.encoder = LlamaModel(config)
+        # self.generator = LlamaModel(config)
+        # self.decoder = LlamaModel(config)
+        self.model = LlamaModel(config)
         
         # add LoRa modulator to qkv and gate_up
         transformer_splits = [
             (
-                self.encoder,
-                [self.input_length, self.output_length, self.z_length]
-            ),
-            (
-                self.generator,
-                [self.input_length, self.z_length]
-            ),
-            (
-                self.decoder,
-                [self.input_length, self.z_length, self.output_length]
+                self.model,
+                None
             )
+            # (
+            #     self.encoder,
+            #     [self.input_length, self.output_length, self.z_length]
+            # ),
+            # (
+            #     self.generator,
+            #     [self.input_length, self.z_length]
+            # ),
+            # (
+            #     self.decoder,
+            #     [self.input_length, self.z_length, self.output_length]
+            # )
         ]
         for transformer, splits in transformer_splits:
             transformer: LlamaModel
             
-            for layer in transformer.layers:
-                layer.self_attn.qkv_proj = LoRaModulator(
-                    layer.self_attn.qkv_proj,
-                    self.lora_rank,
-                    splits
-                )
-                layer.mlp.gate_up_proj = LoRaModulator(
-                    layer.mlp.gate_up_proj,
-                    self.lora_rank,
-                    splits
-                )
+            # for layer in transformer.layers:
+            #     layer.self_attn.qkv_proj = LoRaModulator(
+            #         layer.self_attn.qkv_proj,
+            #         self.lora_rank,
+            #         splits
+            #     )
+            #     layer.mlp.gate_up_proj = LoRaModulator(
+            #         layer.mlp.gate_up_proj,
+            #         self.lora_rank,
+            #         splits
+            #     )
             
             transformer.embed_tokens = None
         
@@ -358,7 +363,7 @@ class ZRMModel(BaseXLAModel):
         )
 
         # run the encoder
-        encoder_states = self.encoder(
+        encoder_states = self.model(
             inputs_embeds=encoder_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias
@@ -419,7 +424,7 @@ class ZRMModel(BaseXLAModel):
         )
 
         # run the generator
-        generator_states = self.generator(
+        generator_states = self.model(
             inputs_embeds=generator_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias
@@ -506,7 +511,7 @@ class ZRMModel(BaseXLAModel):
         )
 
         # run the decoder
-        decoder_states = self.decoder(
+        decoder_states = self.model(
             inputs_embeds=decoder_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias

@@ -278,7 +278,7 @@ class BaseTrainer:
 
     def train_loop(self) -> None:
         self.model.train()
-        self.model.zero_grad(True)
+        self.model.zero_grad()
 
         # For now we assume that we will never train for more than one epoch
         max_step = self.config.trainer.max_steps
@@ -375,7 +375,7 @@ class BaseTrainer:
         logger.info("Finished training run")
 
 
-    # @torch_xla.compile(full_graph=True)
+    @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         
         loss, aux = self.forward(batch)
@@ -394,7 +394,7 @@ class BaseTrainer:
         gard_norm = self.clip_gradients()
         self.optimizer.step()
         self.lr_scheduler.step()
-        self.model.zero_grad(True)
+        self.model.zero_grad()
 
         return loss, aux, gard_norm
 

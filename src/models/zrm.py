@@ -212,8 +212,10 @@ class ZRMModel(BaseXLAModel):
         assert output_ids.shape[-1] == self.output_length
 
         # get the real alpha value
-        alpha = F.softplus(self.log_alpha.mean()) / np.log(2.0)
-        alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
+        alpha = F.softplus(
+            self.log_alpha.mean() * np.sqrt(self.hidden_size)
+        ) / np.log(2.0)
+        # alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
         # alpha = np.sqrt(np.log(self.vocab_size) / self.z_size)
 
         # get reusable components

@@ -1,7 +1,9 @@
 import torch
+import torch.nn.functional as F
 
 import numpy as np
 
+from models.zrm import ZRMModel
 from trainers.base_trainer import BaseTrainer
 from utils import loss as loss_utils
 from utils.torch_utils import scale_gradient
@@ -26,6 +28,8 @@ def per_token(x, labels, pad_token_id):
 
 
 class ZRMTrainer(BaseTrainer):
+
+    model: ZRMModel
 
     def forward(self, batch):
         pad_token_id = self.model.config.pad_token_id
@@ -61,35 +65,30 @@ class ZRMTrainer(BaseTrainer):
         aux['elbo'] = aux['lm_loss'] + aux['kl_per_token']
         w_kl = get_w_kl(kl)
 
-        # kl with respect to the encoder and alpha
+        # kl with respect to the encoder
         aux['enc_kl_scale'] = np.clip(
             (self.step - self.config.trainer.enc_kl_start) / self.config.trainer.enc_kl_warmup,
             0.0, 1.0
         )
-        # this will trigger a recompile, but that's fine because it's only once (we do it this way because of floating point precision issues)
-        enc_mu = out['alpha'] * scale_gradient(
-            out['encoder_mu_raw'], aux['enc_kl_scale']
-        )
         kl_enc = kl_div(
-            enc_mu,
+            out['alpha'].detach() * scale_gradient(out['encoder_mu_raw'], aux['enc_kl_scale']),
             out['generator_mu'].detach()
         ) * w_kl
         aux["enc_kl_per_token"] = per_token(kl_enc, labels, pad_token_id)
 
         # kl with respect to the generator
-        aux['w_interp'] = np.clip(
-            self.step / self.config.trainer.enc_kl_start,
-            0.0, 1.0
-        )
         kl_gen = kl_div(
             out['encoder_mu'].detach(),
             out['alpha'].detach() * out['generator_mu_raw']
         )
-        kl_gen = kl_gen * (
-            aux['w_interp'] * w_kl +
-            (1 - aux['w_interp'])
-        )
         aux["gen_kl_per_token"] = per_token(kl_gen, labels, pad_token_id)
+
+        # kl with respect to alpha
+        kl_alpha = kl_div(
+            out['alpha'] * out['encoder_mu_raw'].detach(),
+            out['alpha'] * out['generator_mu_raw'].detach()
+        )
+        aux["alpha_kl_per_token"] = per_token(kl_alpha, labels, pad_token_id)
 
         # kl with respect to the mean of the encoder mu
         kl_mean = kl_div(
@@ -98,10 +97,35 @@ class ZRMTrainer(BaseTrainer):
         )
         aux["mean_kl_per_token"] = per_token(kl_mean, labels, pad_token_id)
 
+        # uniformity loss
+        # aux['uniformity_weight_scaled'] = self.config.trainer.uniformity_weight * (
+        #     1 - np.clip(
+        #         self.step / self.config.trainer.enc_kl_start,
+        #         0.0, 1.0
+        #     )
+        # )
+        # mu_norm = out['encoder_mu_raw'] / out['encoder_mu_raw'].norm(dim=-1, keepdim=True)
+        # dists = torch.cdist(
+        #     mu_norm.permute(1, 0),
+        #     mu_norm.permute(1, 0),
+        #     p=2
+        # )
+        # dists = torch.masked_fill(
+        #     dists,
+        #     dists < 1e-5,
+        #     10.0
+        # )
+        # aux["uniformity_loss"] = torch.logsumexp(
+        #     -(dists ** 2) * self.config.trainer.uniformity_temp,
+        #     dim=-1
+        # ).mean()
+
         # the loss
         kl_loss = (
             self.config.trainer.kl_weight * aux["enc_kl_per_token"] +
-            aux["gen_kl_per_token"]
+            self.config.trainer.kl_weight * aux["alpha_kl_per_token"] +
+            aux["gen_kl_per_token"] + 
+            # aux['uniformity_weight_scaled'] * aux["uniformity_loss"]
         )
         loss = aux['lm_loss'] + kl_loss
 

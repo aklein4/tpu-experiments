@@ -41,3 +41,6 @@ enc_kl_start: 5000
 enc_kl_warmup: 5000
 
 kl_weight: 0.2
+
+# uniformity_temp: 2.0
+# uniformity_weight: 1.0

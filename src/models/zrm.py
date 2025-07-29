@@ -143,7 +143,7 @@ class ZRMModel(BaseXLAModel):
                     v = layer.versions[version]
 
                     v.self_attn.qkv_proj = LoRaModulator(
-                         v.self_attn.qkv_proj,
+                        v.self_attn.qkv_proj,
                         self.lora_rank,
                         splits
                     )

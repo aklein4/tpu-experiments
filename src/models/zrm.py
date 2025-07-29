@@ -422,11 +422,11 @@ class ZRMModel(BaseXLAModel):
         )
 
         # run the generator
-        # generator_states = self.model(
-        #     inputs_embeds=generator_states,
-        #     position_ids=position_ids,
-        #     elementwise_attention_bias=attention_bias
-        # )
+        generator_states = self.model(
+            inputs_embeds=generator_states,
+            position_ids=position_ids,
+            elementwise_attention_bias=attention_bias
+        )
         
         # get the mu values
         mu = self.generator_mu_proj_out(
@@ -509,11 +509,11 @@ class ZRMModel(BaseXLAModel):
         )
 
         # run the decoder
-        # decoder_states = self.model(
-        #     inputs_embeds=decoder_states,
-        #     position_ids=position_ids,
-        #     elementwise_attention_bias=attention_bias
-        # )
+        decoder_states = self.model(
+            inputs_embeds=decoder_states,
+            position_ids=position_ids,
+            elementwise_attention_bias=attention_bias
+        )
         
         # get the lm head logits
         lm_logits = self.lm_head(decoder_states[:, -self.output_length:])

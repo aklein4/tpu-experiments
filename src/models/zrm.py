@@ -6,13 +6,45 @@ import torch_xla.core.xla_model as xm
 
 import numpy as np
 
+from torchprime.layers.sequential import HomogeneousSequential
+
 from models.xla import BaseXLAModel
-from models.llama import LlamaModel
+from models.llama import LlamaModel, LlamaDecoderLayer
 from utils.torch_utils import (
     scale_gradient,
     expand_to_batch,
     unsqueeze_to_batch
 )
+
+
+class MultiLayer(nn.Module):
+
+    def __init__(self, config, layer_idx, num_versions):
+        super().__init__()
+
+        self.versions = nn.ModuleList([
+            LlamaDecoderLayer(config, layer_idx)
+            for _ in range(num_versions)
+        ])
+
+        self.current_version = 0
+
+    
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: torch.Tensor | None = None,
+        position_ids: torch.Tensor | None = None,
+        position_embeddings: tuple[torch.Tensor, torch.Tensor] | None = None,
+        elementwise_attention_bias: torch.Tensor | None = None,
+    ):
+        return self.versions[self.current_version](
+            hidden_states,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            position_embeddings=position_embeddings,
+            elementwise_attention_bias=elementwise_attention_bias,
+        )
 
 
 class LoRaModulator(nn.Module):
@@ -91,46 +123,34 @@ class ZRMModel(BaseXLAModel):
         self.z_length = config.z_length
         
         # transformers
-        # self.encoder = LlamaModel(config)
-        # self.generator = LlamaModel(config)
-        # self.decoder = LlamaModel(config)
         self.model = LlamaModel(config)
+        self.model.layers = HomogeneousSequential(
+            *[
+                MultiLayer(config, layer_idx, 3)
+                for layer_idx in range(config.num_hidden_layers)
+            ]
+        )
+        self.model.embed_tokens = None
         
         # add LoRa modulator to qkv and gate_up
         transformer_splits = [
-            (
-                self.model,
-                None
-            )
-            # (
-            #     self.encoder,
-            #     [self.input_length, self.output_length, self.z_length]
-            # ),
-            # (
-            #     self.generator,
-            #     [self.input_length, self.z_length]
-            # ),
-            # (
-            #     self.decoder,
-            #     [self.input_length, self.z_length, self.output_length]
-            # )
+            [self.input_length, self.output_length, self.z_length],
+            [self.input_length, self.z_length],
+            [self.input_length, self.z_length, self.output_length]
         ]
-        for transformer, splits in transformer_splits:
-            transformer: LlamaModel
-            
-            # for layer in transformer.layers:
-            #     layer.self_attn.qkv_proj = LoRaModulator(
-            #         layer.self_attn.qkv_proj,
-            #         self.lora_rank,
-            #         splits
-            #     )
-            #     layer.mlp.gate_up_proj = LoRaModulator(
-            #         layer.mlp.gate_up_proj,
-            #         self.lora_rank,
-            #         splits
-            #     )
-            
-            transformer.embed_tokens = None
+        for version, splits in enumerate(transformer_splits):
+            for layer in self.model.layers:
+
+                    layer.versions[version].self_attn.qkv_proj = LoRaModulator(
+                        layer.self_attn.qkv_proj,
+                        self.lora_rank,
+                        splits
+                    )
+                    layer.versions[version].mlp.gate_up_proj = LoRaModulator(
+                        layer.mlp.gate_up_proj,
+                        self.lora_rank,
+                        splits
+                    )
         
         # LM components
         self.embed_tokens = nn.Embedding(self.vocab_size, self.hidden_size)
@@ -205,6 +225,11 @@ class ZRMModel(BaseXLAModel):
 
         elif isinstance(module, nn.Embedding):
             module.weight.data.normal_(mean=0.0, std=1.0)
+
+
+    def _set_versions(self, version: int):
+        for layer in self.model.layers:
+            layer.current_version = version
 
 
     def forward(
@@ -361,6 +386,7 @@ class ZRMModel(BaseXLAModel):
         )
 
         # run the encoder
+        self._set_versions(0)
         encoder_states = self.model(
             inputs_embeds=encoder_states,
             position_ids=position_ids,
@@ -422,6 +448,7 @@ class ZRMModel(BaseXLAModel):
         )
 
         # run the generator
+        self._set_versions(1)
         generator_states = self.model(
             inputs_embeds=generator_states,
             position_ids=position_ids,
@@ -509,6 +536,7 @@ class ZRMModel(BaseXLAModel):
         )
 
         # run the decoder
+        self._set_versions(2)
         decoder_states = self.model(
             inputs_embeds=decoder_states,
             position_ids=position_ids,

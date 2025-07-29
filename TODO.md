@@ -1,4 +1,8 @@
 
+### Questions
+ - [ ] Can scale_gradient use custom backwards?
+ - [ ] What should/can ZRM activation sharding config be?
+
 ### Repo Setup
  - [x] Port torchprime
  - [x] Implement data loading/collating

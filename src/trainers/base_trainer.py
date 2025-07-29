@@ -15,6 +15,7 @@ import math
 import os
 from timeit import default_timer as timer
 import shutil
+import json
 
 import torch
 import torch.nn.utils as nn_utils
@@ -248,15 +249,21 @@ class BaseTrainer:
     ):
         logger.info("[SAVING] Starting distributed checkpoint...")
 
-        save_path = os.path.join(
-            constants.LOCAL_DATA_PATH,
-            "tmp_checkpoint",
-        )
-
-        self.model._maybe_save_checkpoint(save_path, convert_to_safetensors=False)
-        logger.info(f"Saved checkpoint to {save_path} at step {step}")
+        xm.wait_device_ops()
+        xm.rendezvous(f"checkpoint_start_{step}")
 
         if constants.PROCESS_IS_MAIN(): 
+
+            save_path = os.path.join(
+                constants.LOCAL_DATA_PATH,
+                "tmp_checkpoint",
+            )
+            os.makedirs(save_path, exist_ok=True)
+
+            xm.save(self.model.state_dict(), os.path.join(save_path, "model.pt"))
+            with open(os.path.join(save_path, "config.json"), "w") as f:
+                json.dump(OmegaConf.to_container(self.config, resolve=True), f, indent=4)
+            logger.info(f"Saved checkpoint to {save_path}")
 
             api = hf.HfApi()
             out_path = f"{step:012d}"
@@ -272,7 +279,7 @@ class BaseTrainer:
 
         shutil.rmtree(save_path, ignore_errors=True)
         
-        xm.rendezvous(f"checkpoint_saved")
+        xm.rendezvous(f"checkpoint_saved_{step}")
         logger.info("[SAVING] Finished distributed checkpoint.")      
     
 
@@ -371,6 +378,7 @@ class BaseTrainer:
                 run_async=False,
             )
         
+            xm.mark_step()
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
 

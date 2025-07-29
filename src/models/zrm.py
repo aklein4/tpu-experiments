@@ -232,10 +232,8 @@ class ZRMModel(BaseXLAModel):
         output_bias = (output_ids == self.config.pad_token_id).float() * self.config.pad_bias
 
         # get the noise
-        noise = torch.randn(
-            input_tokens.shape[0], self.z_length, self.z_size,
-            device=input_tokens.device,
-            dtype=input_tokens.dtype,
+        noise = torch.randn_like(
+            input_tokens[:, :self.z_length, :self.z_size],
         )
 
         # run the encoder

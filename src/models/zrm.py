@@ -140,14 +140,15 @@ class ZRMModel(BaseXLAModel):
         ]
         for version, splits in enumerate(transformer_splits):
             for layer in self.model.layers:
+                    v = layer.versions[version]
 
-                    layer.versions[version].self_attn.qkv_proj = LoRaModulator(
-                        layer.self_attn.qkv_proj,
+                    v.self_attn.qkv_proj = LoRaModulator(
+                         v.self_attn.qkv_proj,
                         self.lora_rank,
                         splits
                     )
-                    layer.versions[version].mlp.gate_up_proj = LoRaModulator(
-                        layer.mlp.gate_up_proj,
+                    v.mlp.gate_up_proj = LoRaModulator(
+                        v.mlp.gate_up_proj,
                         self.lora_rank,
                         splits
                     )

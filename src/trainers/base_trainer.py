@@ -104,7 +104,7 @@ class BaseTrainer:
         )
         model = mark_pure_modules(model, config)
 
-        try:
+        if hasattr(config.model.remat, 'apply_to_modules'):
             modules_to_remat = config.model.remat.apply_to_modules
             logger.info(f"Applying rematerialization to modules: {modules_to_remat}")
             for name in modules_to_remat:
@@ -114,7 +114,7 @@ class BaseTrainer:
                         getattr(model, name), config.model.remat
                     )
                 )
-        except:
+        else:
             model = add_activation_checkpointing_and_scan(model, config.model.remat)
         
         model = add_optimization_barriers(model, config)

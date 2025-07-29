@@ -16,15 +16,14 @@ BASE_PATH = os.path.dirname( # src
     )
 )
 
-# id of the current device
-PROCESS_INDEX = lambda: xr.process_index()
 
-# whether this is the main process on its device
-PROCESS_IS_MAIN = lambda: xr.process_index() == 0
+XLA_DEVICE = lambda: xm.xla_device()
 
 PROCESS_COUNT = lambda: xr.process_count()
 
-XLA_DEVICE = lambda: xm.xla_device()
+PROCESS_INDEX = lambda: xr.process_index()
+PROCESS_IS_MAIN = lambda: xm.is_master_ordinal(local=False)
+
 
 # local data path
 LOCAL_DATA_PATH = os.path.join(BASE_PATH, "local_data")

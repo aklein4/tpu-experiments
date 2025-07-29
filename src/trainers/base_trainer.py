@@ -57,9 +57,6 @@ from utils.import_utils import import_class
 from utils import constants
 
 
-logger = logging.getLogger(__name__)
-
-
 _ADAFACTOR = "adafactor"
 _ADAMW = "adamw"
 
@@ -85,8 +82,10 @@ class BaseTrainer:
         config: DictConfig,
         train_dataset: Dataset | IterableDataset | None,
     ):
+        self.logger = logging.getLogger(__name__)
+
         self.config = config
-        self.device = xm.xla_device()
+        self.device = constants.XLA_DEVICE()
         self.global_batch_size = self.config.trainer.global_batch_size
         self.train_dataset = train_dataset
 
@@ -102,9 +101,11 @@ class BaseTrainer:
         # Mark pure modules in the model for optimization.
         model = mark_pure_modules(model, config)
 
-        try:
+        # apply rematerialization and optimization barriers
+        if hasattr(config.model.remat, "apply_to_modules"):
             modules_to_remat = config.model.remat.apply_to_modules
-            logger.info(f"Applying rematerialization to modules: {modules_to_remat}")
+            self.logger.info(f"Applying rematerialization to modules: {modules_to_remat}")
+            
             for name in modules_to_remat:
                 setattr(
                     model, name,
@@ -112,7 +113,8 @@ class BaseTrainer:
                         getattr(model, name), config.model.remat
                     )
                 )
-        except:
+
+        else:
             model = add_activation_checkpointing_and_scan(model, config.model.remat)
         
         model = add_optimization_barriers(model, config)
@@ -122,6 +124,7 @@ class BaseTrainer:
         self.optimizer = type(self)._create_optimizer(config, model.parameters())
         if hasattr(self.optimizer, "preload"):
             self.optimizer.preload()
+        
         self.lr_scheduler = get_scheduler(
             name=self.config.trainer.lr_scheduler.type,
             optimizer=self.optimizer,
@@ -175,7 +178,6 @@ class BaseTrainer:
             )
 
         elif config.trainer.optimizer.type == _ADAFACTOR:
-
             optimizer = Adafactor(
                 params=model_parameters,
                 lr=config.trainer.optimizer.learning_rate,
@@ -194,8 +196,8 @@ class BaseTrainer:
         if self.train_dataset is None:
             raise ValueError("Trainer: training requires a train_dataset.")
 
-        num_replicas = xr.process_count()
-        logger.info("Num replicas: %d", num_replicas)
+        num_replicas = constants.PROCESS_COUNT()
+        self.logger.info("Num replicas: %d", num_replicas)
 
         # if self.minibatch:
         #     sampler = torch.utils.data.DistributedSampler(
@@ -215,7 +217,7 @@ class BaseTrainer:
         #         drop_last=True,
         #     )
 
-        assert self.global_batch_size is not None
+        assert self.global_batch_size % num_replicas == 0
         batch_size = self.global_batch_size // num_replicas
 
         # handle the collator
@@ -229,9 +231,12 @@ class BaseTrainer:
             # sampler=sampler,
             shuffle=False,
             drop_last=True,
+            pin_memory=True,
         )
         loader = pl.MpDeviceLoader(
-            dataloader, self.device, # input_sharding=self.input_sharding_spec
+            dataloader,
+            device=self.device,
+            # input_sharding=self.input_sharding_spec
         )
         return loader
     
@@ -240,7 +245,7 @@ class BaseTrainer:
         self,
         step: int,
     ):
-        logger.info("[SAVING] Starting distributed checkpoint...")
+        self.logger.info("[SAVING] Starting distributed checkpoint...")
 
         save_path = os.path.join(
             constants.LOCAL_DATA_PATH,
@@ -248,7 +253,7 @@ class BaseTrainer:
         )
 
         self.model._maybe_save_checkpoint(save_path, convert_to_safetensors=False)
-        logger.info(f"Saved checkpoint to {save_path} at step {step}")
+        self.logger.info(f"Saved checkpoint to {save_path} at step {step}")
 
         if constants.PROCESS_IS_MAIN(): 
 
@@ -262,12 +267,12 @@ class BaseTrainer:
                 repo_type="model",
                 token=constants.HF_TOKEN,
             )
-            logger.info(f"Uploaded checkpoint to {self.repo_name}/{out_path}")
+            self.logger.info(f"Uploaded checkpoint to {self.repo_name}/{out_path}")
 
         shutil.rmtree(save_path, ignore_errors=True)
         
         xm.rendezvous(f"checkpoint_saved")
-        logger.info("[SAVING] Finished distributed checkpoint.")      
+        self.logger.info("[SAVING] Finished distributed checkpoint.")      
     
 
     def train_loop(self) -> None:
@@ -283,16 +288,16 @@ class BaseTrainer:
         steps_per_epoch = max_step
         train_iterator = iter(train_loader)
 
-        logger.info("Starting training")
-        logger.info("    Max step: %d", max_step)
-        logger.info("    Global batch size: %d", self.global_batch_size)
+        self.logger.info("Starting training")
+        self.logger.info("    Max step: %d", max_step)
+        self.logger.info("    Global batch size: %d", self.global_batch_size)
 
         epoch = 0
         for step in range(max_step):
             try:
                 batch = next(train_iterator)
             except StopIteration:
-                logger.warning("DataLoader exhausted at step %d, reset iterator", step)
+                self.logger.warning("DataLoader exhausted at step %d, reset iterator", step)
                 epoch += 1
                 train_iterator = iter(train_loader)
                 batch = next(train_iterator)
@@ -321,7 +326,7 @@ class BaseTrainer:
                 loss = loss.detach().item()
                 grad_norm = grad_norm.detach().item()
 
-                logger.info(
+                self.logger.info(
                     "Epoch: %.4f, step: %d, loss: %.4f, grad_norm: %.4f, lr: %.2e, trace time: %.2f ms",
                     step / steps_per_epoch,
                     step,
@@ -362,14 +367,14 @@ class BaseTrainer:
                     trace_end_time,
                     self.lr_scheduler.get_last_lr()[0],
                 ),
-                run_async=True,
+                run_async=False,
             )
         
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
 
         xm.wait_device_ops()
-        logger.info("Finished training run")
+        self.logger.info("Finished training run")
 
 
     # @torch_xla.compile(full_graph=True)
@@ -387,11 +392,11 @@ class BaseTrainer:
         #         aux[k] = mean_reduce(v)
 
         loss.backward()
-        xm.reduce_gradients(self.optimizer)
+        # xm.reduce_gradients(self.optimizer)
         
-        grad_norm = self.clip_gradients()
+        grad_norm = torch.ones_like(loss) # self.clip_gradients()
 
-        self.optimizer.step()
+        xm.optimizer_step(self.optimizer)
         self.lr_scheduler.step()
         self.model.zero_grad(True)
 

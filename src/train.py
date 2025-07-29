@@ -3,6 +3,7 @@
 import os
 os.environ['PJRT_DEVICE'] = 'TPU'
 
+
 import logging
 import sys
 
@@ -25,10 +26,11 @@ from utils import constants
 from utils.import_utils import import_class
 
 transformers.utils.check_min_version("4.39.3")
-logger = logging.getLogger(__name__)
 
 
 def _mp_fn(index, config: omegaconf.DictConfig):
+
+    logger = logging.getLogger(__name__)
 
     # set up logging
     logging.basicConfig(
@@ -66,7 +68,7 @@ def _mp_fn(index, config: omegaconf.DictConfig):
 
     # set up logging
     logger.setLevel(logging.INFO)
-    if constants.PROCESS_IS_MAIN() or True:
+    if constants.PROCESS_IS_MAIN():
         verbosity = logging.INFO 
     else:
         logging.disable(logging.CRITICAL)

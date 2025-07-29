@@ -18,6 +18,10 @@ def scale_gradient(x, scale):
     return _ScaleGradient.apply(x, scale)
 
 
+# def scale_gradient(x, scale):
+#     return x.detach() + (x - x.detach()) * scale
+
+
 def unsqueeze_to_batch(x, target):
     while x.dim() < target.dim():
         x = x[None]
@@ -26,15 +30,32 @@ def unsqueeze_to_batch(x, target):
 
 
 def expand_to_batch(x, target):
-    og_shape = x.shape
 
     num_unsqueeze = 0
     while x.dim() < target.dim():
         x = x[None]
         num_unsqueeze += 1
 
-    x = x.expand(
-        *([target.shape[i] for i in range(num_unsqueeze)] + list(og_shape))
+    x = x.repeat(
+        *(
+            [target.shape[i] for i in range(num_unsqueeze)] +
+            [1] * (x.dim() - num_unsqueeze)
+        )
     )
 
     return x
+
+
+class FakeModule(nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+
+    def forward(
+        self,
+        fn,
+        *args,
+        **kwargs
+    ):
+        return fn(*args, **kwargs)

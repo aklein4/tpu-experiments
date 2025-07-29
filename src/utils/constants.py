@@ -23,6 +23,12 @@ PROCESS_IS_MAIN = lambda: xr.process_index() == 0
 
 PROCESS_COUNT = lambda: xr.process_count()
 
+# these might be the correct ones?
+# XLA_DEVICE = lambda: xm.xla_device()
+# PROCESS_COUNT = lambda: xr.process_count()
+# PROCESS_INDEX = lambda: xr.process_index()
+# PROCESS_IS_MAIN = lambda: xm.is_master_ordinal(local=False)
+
 # local data path
 LOCAL_DATA_PATH = os.path.join(BASE_PATH, "local_data")
 

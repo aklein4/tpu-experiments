@@ -1,12 +1,12 @@
 
-trainer_class: llm_trainer.LLMTrainer  # Used to import the trainer from this class
+trainer_class: zrm_trainer.ZRMTrainer  # Used to import the trainer from this class
 
 # This is for basic training loop, i.e., forward/backward pass without any special task logic.
-global_batch_size: 64
+global_batch_size: 256
 max_steps: 160000
 
 # checkpointing configuration
-checkpoint_interval: 5000  # Save a checkpoint every N steps
+checkpoint_interval: 2500  # Save a checkpoint every N steps
 # convert_to_safetensors: true  # Convert the model to safetensors format when saving
 
 # Optimizer configuration.
@@ -36,3 +36,8 @@ max_grad_norm: 1.0
 # Defaults to not clip gradients by their absolute value.
 # Set to a number to clip gradients by the specified max absolute value.
 max_grad_value: null
+
+enc_kl_start: 5000
+enc_kl_warmup: 5000
+
+kl_weight: 0.2

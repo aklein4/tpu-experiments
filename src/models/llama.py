@@ -9,7 +9,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#         http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -235,7 +235,7 @@ class LlamaAttention(nn.Module):
         cos, sin = position_embeddings
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
-        # apply elementwise attention bias
+        # apply elementwise attention bias 
         if elementwise_attention_bias is not None:
             first_ind = (query_states.shape[-1] //2 ) - 1
             sec_ind = -1
@@ -352,17 +352,17 @@ class LlamaModel(nn.Module):
     def forward(
         self,
         input_ids: torch.LongTensor | None = None,
-        input_embeds: torch.FloatTensor | None = None,
+        inputs_embeds: torch.FloatTensor | None = None,
         attention_mask: torch.FloatTensor | None = None,
         position_ids: torch.LongTensor | None = None,
         elementwise_attention_bias: torch.LongTensor | None = None,
     ) -> torch.Tensor:
-        assert (input_ids is not None) ^ (input_embeds is not None), (
-            "You have to specify either input_ids or input_embeds, but not both."
+        assert (input_ids is not None) ^ (inputs_embeds is not None), (
+            "You have to specify either input_ids or inputs_embeds, but not both."
         )
         
         # convert input ids to embeddings
-        if input_embeds is None:
+        if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
         seq_length = inputs_embeds.shape[1]
@@ -418,16 +418,15 @@ class LlamaForCausalLM(BaseXLAModel):
         self.apply(self._init_weights)
 
     
-        def _init_weights(self, module: nn.Module):
-            logger.info(f"Initializing weights for {module.__class__.__name__}")
+    def _init_weights(self, module: nn.Module):
 
-            if isinstance(module, nn.Linear):
-                module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)
-                if module.bias is not None:
-                    module.bias.data.zero_()
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)
+            if module.bias is not None:
+                module.bias.data.zero_()
 
-            elif isinstance(module, nn.Embedding):
-                module.weight.data.normal_(mean=0.0, std=1.0)
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=1.0)
 
 
     @xp.trace_me("LlamaForCausalLM")
@@ -436,9 +435,14 @@ class LlamaForCausalLM(BaseXLAModel):
         input_ids: torch.LongTensor,
         labels: torch.LongTensor | None = None,
         attention_mask: torch.FloatTensor | None = None,
+        shift_states: bool = False,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         
         hidden_states = self.model(input_ids=input_ids, attention_mask=attention_mask)
+
+        if shift_states:
+            # Shift the hidden states to the right for causal language modeling
+            hidden_states = hidden_states[..., :-1, :].contiguous()
 
         logits = self.lm_head(hidden_states)
         logits = logits.float()

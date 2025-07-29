@@ -30,13 +30,14 @@
     - [x] Implement Encoder
     - [x] Implement parameterized alpha for RMS scaling
  - [ ] Implement ZLM Loss
-    - [ ] LM loss, acc, pcorr
+    - [x] LM loss, acc, pcorr
     - [ ] KL loss hook for alpha?
-    - [ ] weight of grad(KL, gen_mu) = 1
-    - [ ] weight of grad(KL, alpha) = scale
-    - [ ] weight of grad(KL, enc_mu) = [0, warmup, scale] with batch L1 weighting
+    - [x] weight of grad(KL, gen_mu) = 1
+    - [x] weight of grad(KL, alpha) = scale
+    - [x] weight of grad(KL, enc_mu) = [0, warmup, scale] with batch L1 weighting
     - [ ] acc threshold for grad(LM loss, enc_mu)? (save grad scale in previous wtep closure)
  - [ ] Train ZLM
 
 ### Issues
  - [ ] Why are there NaNs?
+ 

@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import torch_xla.core.xla_model as xm
+
 import numpy as np
 
 from models.xla import BaseXLAModel
@@ -66,11 +68,13 @@ class LoRaModulator(nn.Module):
         )
         outer = self.lora_up(inner)
 
-        # return the result
-        return self.base_linear(x) + outer
+        return (
+            self.base_linear(x) * np.sqrt(0.5) +
+            outer * np.sqrt(0.5)
+        )
 
 
-class ZRModel(BaseXLAModel):
+class ZRMModel(BaseXLAModel):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -107,6 +111,8 @@ class ZRModel(BaseXLAModel):
             )
         ]
         for transformer, splits in transformer_splits:
+            transformer: LlamaModel
+            
             for layer in transformer.layers:
                 layer.self_attn.qkv_proj = LoRaModulator(
                     layer.self_attn.qkv_proj,
@@ -118,6 +124,8 @@ class ZRModel(BaseXLAModel):
                     self.lora_rank,
                     splits
                 )
+            
+            transformer.embed_tokens = None
         
         # LM components
         self.embed_tokens = nn.Embedding(self.vocab_size, self.hidden_size)
@@ -125,44 +133,44 @@ class ZRModel(BaseXLAModel):
 
         # input embeddings
         self.encoder_input_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+            torch.randn(1, self.hidden_size)
         )
-        self.encoder_sep_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+        self.encoder_sep_token = nn.Parameter(
+            torch.randn(self.hidden_size)
         )
         self.encoder_output_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+            torch.randn(1, self.hidden_size)
         )
         self.encoder_z_tokens = nn.Parameter(
-                torch.randn(self.z_length, self.hidden_size) * self.config.initializer_range
+            torch.randn(self.z_length, self.hidden_size)
         )
 
         self.generator_input_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+                torch.randn(1, self.hidden_size)
         )
         self.generator_z_tokens = nn.Parameter(
-                torch.randn(self.z_length, self.hidden_size) * self.config.initializer_range
+                torch.randn(self.z_length, self.hidden_size)
         )
 
         self.decoder_input_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+                torch.randn(1, self.hidden_size)
         )
         self.decoder_z_tokens = nn.Parameter(
-                torch.randn(self.z_length, self.hidden_size) * self.config.initializer_range
+                torch.randn(self.z_length, self.hidden_size)
         )
         self.decoder_start_output_token = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+                torch.randn(self.hidden_size)
         )
         self.decoder_output_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) * self.config.initializer_range
+                torch.randn(1, self.hidden_size)
         )
 
         # z/noise io components
         self.encoder_noise_proj_in = nn.Linear(
-                self.z_size, self.hidden_size, bias=False
+            self.z_size, self.hidden_size, bias=False
         )
         self.encoder_mu_proj_out = nn.Linear(
-                self.hidden_size, self.z_size, bias=False
+            self.hidden_size, self.z_size, bias=False
         )
 
         self.generator_z_proj_in = nn.Linear(
@@ -177,23 +185,37 @@ class ZRModel(BaseXLAModel):
         )
 
         # scaling components
-        self.log_alpha = nn.Parameter(torch.tensor(0.0))
+        self.log_alpha = nn.Parameter(torch.tensor([0.0] * 64))
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
+
+
+    def _init_weights(self, module: nn.Module):
+
+        if isinstance(module, nn.Linear):
+            module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)
+            if module.bias is not None:
+                module.bias.data.zero_()
+
+        elif isinstance(module, nn.Embedding):
+            module.weight.data.normal_(mean=0.0, std=1.0)
 
 
     def forward(
         self,
         input_ids: torch.LongTensor,
         output_ids: torch.LongTensor,
-        z_grad_scale: float = 1.0,
+        gen_grad_scale: float = 1.0,
+        lm_grad_scale: float = 1.0,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         assert input_ids.shape[-1] == self.input_length
         assert output_ids.shape[-1] == self.output_length
 
         # get the real alpha value
-        alpha = F.softplus(self.log_alpha) / np.log(2.0)
+        alpha = F.softplus(self.log_alpha.mean()) / np.log(2.0)
+        alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
+        # alpha = np.sqrt(np.log(self.vocab_size) / self.z_size)
 
         # get reusable components
         input_tokens = self.embed_tokens(input_ids)
@@ -206,10 +228,8 @@ class ZRModel(BaseXLAModel):
         output_bias = (output_ids == self.config.pad_token_id).float() * self.config.pad_bias
 
         # get the noise
-        noise = torch.randn(
-            input_tokens.shape[0], self.z_length, self.z_size,
-            device=input_tokens.device,
-            dtype=input_tokens.dtype,
+        noise = torch.randn_like(
+            input_tokens[:, :self.z_length, :self.z_size],
         )
 
         # run the encoder
@@ -223,25 +243,29 @@ class ZRModel(BaseXLAModel):
             noise=noise,
         )
         encoder_mu_raw = F.rms_norm(
-            encoder_mu,
-            self.z_size,
+            encoder_mu_raw,
+            [self.z_size],
             eps=self.config.rms_norm_eps
         )
         encoder_mu = encoder_mu_raw * alpha
 
         # run the generator
+        gen_z = scale_gradient(
+            encoder_mu,
+            gen_grad_scale,
+        ) + noise
         generator_mu_raw = self.generate(
             input_tokens=input_tokens,
             input_mask=input_mask,
             input_bias=input_bias,
-            z=(encoder_mu + noise)
+            z=gen_z
         )
         generator_mu = generator_mu_raw * alpha
 
-        # run the decoder
+        # run the decoder   
         decoder_z = scale_gradient(
             encoder_mu,
-            z_grad_scale,
+            lm_grad_scale,
         ) + noise
         lm_logits = self.decode(
             input_tokens=input_tokens,
@@ -263,6 +287,16 @@ class ZRModel(BaseXLAModel):
         }
     
 
+    def _shift_right(self, x, first=0.0):
+        return torch.cat(
+            [
+                (x[:, :1] * 0) + first,
+                x[:, :-1]
+            ],
+            dim=-2
+        )
+    
+
     def encode(
         self,
         input_tokens: torch.Tensor,
@@ -276,30 +310,24 @@ class ZRModel(BaseXLAModel):
         
         # construct the encoder input
         input_states = (
-            expand_to_batch(self.encoder_input_emb, input_tokens) +
+            unsqueeze_to_batch(self.encoder_input_emb, input_tokens) +
             input_tokens
         )
 
         output_states = (
-            expand_to_batch(self.encoder_output_emb, output_tokens) +
+            unsqueeze_to_batch(self.encoder_output_emb, output_tokens) +
             torch.cat(
                 [
-                    output_tokens[:, :1] + expand_to_batch(self.encoder_sep_emb, output_tokens[:, :1]),
+                    output_tokens[:, :1] + unsqueeze_to_batch(self.encoder_sep_token[None], output_tokens[:, :1]),
                     output_tokens[:, 1:],
                 ],
                 dim=-2
             )
         )
 
-        z_states = torch.cat(
-            [
-                expand_to_batch(self.encoder_z_tokens[:, :1], input_tokens),
-                (
-                    expand_to_batch(self.encoder_z_tokens[:, 1:], input_tokens) +
-                    self.encoder_noise_proj_in(noise[:, :-1])
-                )
-            ],
-            dim=-2
+        z_states = (
+            unsqueeze_to_batch(self.encoder_z_tokens, input_tokens) +
+            self.encoder_noise_proj_in(self._shift_right(noise))
         )
 
         encoder_states = torch.cat(
@@ -320,7 +348,7 @@ class ZRModel(BaseXLAModel):
             ],
             dim=-1
         )
-        position_ids = position_mask.cumsum(dim=-1) - 1
+        position_ids = position_mask.cumsum(dim=-1)
 
         # create the bias
         attention_bias = torch.cat(
@@ -334,7 +362,7 @@ class ZRModel(BaseXLAModel):
 
         # run the encoder
         encoder_states = self.encoder(
-            input_embeds=encoder_states,
+            inputs_embeds=encoder_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias
         )
@@ -354,24 +382,18 @@ class ZRModel(BaseXLAModel):
         input_bias: torch.FloatTensor,
         z: torch.FloatTensor,
     ):
-        
+
         # construct the generator input
         input_states = (
-            expand_to_batch(self.generator_input_emb, input_tokens) +
+            unsqueeze_to_batch(self.generator_input_emb, input_tokens) +
             input_tokens
         )
 
-        z_states = torch.cat(
-            [
-                expand_to_batch(self.generator_z_tokens[:, :1], input_tokens),
-                (
-                    expand_to_batch(self.generator_z_tokens[:, 1:], input_tokens) +
-                    self.generator_z_proj_in(z[:, :-1])
-                )
-            ],
-            dim=-2
+        z_states = (
+            unsqueeze_to_batch(self.generator_z_tokens, input_tokens) +
+            self.generator_z_proj_in(self._shift_right(z))
         )
-
+ 
         generator_states = torch.cat(
             [
                 input_states,
@@ -388,7 +410,7 @@ class ZRModel(BaseXLAModel):
             ],
             dim=-1
         )
-        position_ids = position_mask.cumsum(dim=-1) - 1
+        position_ids = position_mask.cumsum(dim=-1)
 
         # create the bias
         attention_bias = torch.cat(
@@ -399,9 +421,9 @@ class ZRModel(BaseXLAModel):
             dim=-1
         )
 
-        # run the encoder
-        generator_states = self.encoder(
-            input_embeds=generator_states,
+        # run the generator
+        generator_states = self.generator(
+            inputs_embeds=generator_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias
         )
@@ -427,23 +449,20 @@ class ZRModel(BaseXLAModel):
         
         # construct the decoder input
         input_states = (
-            expand_to_batch(self.decoder_input_emb, input_tokens) +
+            unsqueeze_to_batch(self.decoder_input_emb, input_tokens) +
             input_tokens
         )
 
         z_states = (
-            expand_to_batch(self.decoder_z_tokens, input_tokens) +
+            unsqueeze_to_batch(self.decoder_z_tokens, input_tokens) +
             self.decoder_z_proj_in(z)
         )
 
         output_states = (
-            expand_to_batch(self.decoder_output_emb, output_tokens) +
-            torch.cat(
-                [
-                    expand_to_batch(self.decoder_start_output_token, output_tokens[:, :-1]),
-                    output_tokens[:, :-1],
-                ],
-                dim=-2
+            unsqueeze_to_batch(self.decoder_output_emb, output_tokens) +
+            self._shift_right(
+                output_tokens,
+                first=unsqueeze_to_batch(self.decoder_start_output_token[None], output_tokens[:, :1])
             )
         )
 
@@ -471,7 +490,7 @@ class ZRModel(BaseXLAModel):
             ],
             dim=-1
         )
-        position_ids = position_mask.cumsum(dim=-1) - 1
+        position_ids = position_mask.cumsum(dim=-1)
 
         # create the bias
         attention_bias = torch.cat(
@@ -489,16 +508,15 @@ class ZRModel(BaseXLAModel):
             dim=-1
         )
 
-        # run the encoder
-        decoder_states = self.encoder(
-            input_embeds=decoder_states,
+        # run the decoder
+        decoder_states = self.decoder(
+            inputs_embeds=decoder_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias
         )
         
         # get the lm head logits
         lm_logits = self.lm_head(decoder_states[:, -self.output_length:])
-        lm_logits = torch.nn.functional.log_softmax(lm_logits, dim=-1)
 
         return lm_logits
     

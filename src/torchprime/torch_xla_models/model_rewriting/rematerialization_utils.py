@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def add_activation_checkpointing_and_scan(
-  model: nn.Module, config: DictConfig
+  model: nn.Module, remat_config: DictConfig
 ) -> nn.Module:
   """Applies activation checkpointing and optionally compiles layers using scan.
 
@@ -50,7 +50,7 @@ def add_activation_checkpointing_and_scan(
     NotImplementedError: If multiple layers are passed for offloading.
     NotImplementedError: If checkpointed layer does not match scanned layer.
   """
-  remat_config = config.model.remat
+  # remat_config = config.model.remat
   remat_classes = get_classes_by_names(
     model, remat_config.get("activation_checkpoint_layers", [])
   )

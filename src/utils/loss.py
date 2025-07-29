@@ -5,6 +5,54 @@ import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss
 
 
+def fast_lm_loss(
+    logits: torch.FloatTensor,
+    labels: torch.LongTensor,
+    ignore_index: int = -100,
+    shift_logits: bool = True,
+    shift_labels: bool = True
+):
+    
+    # shift if needed
+    if shift_logits:
+        logits = logits[..., :-1, :].contiguous()
+    if shift_labels:
+        labels = labels[..., 1:].contiguous()
+
+    # reshape to remove batch dimension
+    logits = logits.view(-1, logits.shape[-1])
+    labels = labels.view(-1)
+    
+    # calculate the mask
+    mask = labels != ignore_index
+    mask_sum = mask.float().sum()
+
+    # calculate the loss
+    loss = F.cross_entropy(
+        logits, labels,
+        ignore_index=ignore_index,
+    )
+
+    # calculate the accuracy
+    correct = (logits.argmax(dim=-1) == labels).float()
+    acc = correct.masked_fill(~mask, 0.0).sum() / (mask_sum + 1)
+
+    # calculate the pcorr
+    logp = -F.cross_entropy(
+        logits, labels,
+        reduction='none',
+    )
+    p = logp.exp()
+    pcorr = p.masked_fill(~mask, 0.0).sum() / (mask_sum + 1)
+
+    return {
+        "loss": loss,
+        "acc": acc,
+        "pcorr": pcorr
+    }
+
+
+
 def shift_tokens(logits, labels):
     return logits[..., :-1, :].contiguous(), labels[..., 1:].contiguous()
 

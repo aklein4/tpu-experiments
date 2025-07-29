@@ -126,15 +126,15 @@ class AttentionModule(nn.Module):
       case "flash_attention":
         # Integrated with PyTorch/XLA Pallas Flash Attention:
         default_block_sizes = {
-          "block_q": 2048,
+          "block_q": 512, # 2048,
           "block_k_major": 512,
           "block_k": 512,
           "block_b": 2,
-          "block_q_major_dkv": 2048,
+          "block_q_major_dkv": 512, # 2048,
           "block_k_major_dkv": 512,
-          "block_q_dkv": 2048,
+          "block_q_dkv": 512, # 2048,
           "block_k_dkv": 512,
-          "block_q_dq": 2048,
+          "block_q_dq": 512, # 2048,
           "block_k_dq": 256,
           "block_k_major_dq": 512,
         }
@@ -142,7 +142,20 @@ class AttentionModule(nn.Module):
           default_block_sizes.update(self.kernel_config)
         FlashAttention.DEFAULT_BLOCK_SIZES = default_block_sizes
 
-        query_states /= math.sqrt(head_dim)
+        def _pad(x, l):
+          if x.shape[-2] % l != 0:
+            return torch.cat(
+              [x, torch.zeros_like(x[:, :, :(l - (x.shape[-2] % l)), :])],
+              dim=-2
+            )
+          return x
+
+        og_len = query_states.shape[-2]
+        query_states = _pad(query_states, 512)
+        key_states = _pad(key_states, 512)
+        value_states = _pad(value_states, 512)
+
+        query_states = query_states / math.sqrt(head_dim)
         attn_output = flash_attention(
           query_states,
           key_states,
@@ -150,6 +163,8 @@ class AttentionModule(nn.Module):
           causal=True,
           partition_spec=self.partition_spec,
         )
+        attn_output = attn_output[:, :, :og_len, :]
+
       case _:
         attn_weights = torch.matmul(
           query_states, key_states.transpose(2, 3)

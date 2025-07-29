@@ -22,6 +22,7 @@ import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.runtime as xr
+from torch_xla.core import functions as xf
 
 from omegaconf import DictConfig, OmegaConf
 
@@ -102,12 +103,29 @@ class BaseTrainer:
             model, config
         )
         model = mark_pure_modules(model, config)
-        model = add_activation_checkpointing_and_scan(model, config)
+
+        if hasattr(config.model.remat, 'apply_to_modules'):
+            modules_to_remat = config.model.remat.apply_to_modules
+            logger.info(f"Applying rematerialization to modules: {modules_to_remat}")
+            for name in modules_to_remat:
+                setattr(
+                    model, name,
+                    add_activation_checkpointing_and_scan(
+                        getattr(model, name), config.model.remat
+                    )
+                )
+        else:
+            model = add_activation_checkpointing_and_scan(model, config.model.remat)
+        
         model = add_optimization_barriers(model, config)
         self.model = model
 
         # create optimizer and learning rate scheduler
         self.optimizer = type(self)._create_optimizer(config, model.parameters())
+        # if hasattr(self.optimizer, "preload"):
+        #     logger.info("Preloading optimizer state")
+        #     self.optimizer.preload()
+        
         self.lr_scheduler = get_scheduler(
             name=self.config.trainer.lr_scheduler.type,
             optimizer=self.optimizer,
@@ -131,6 +149,7 @@ class BaseTrainer:
                 project=self.config.project,
                 name=self.config.name,
                 notes=self.config.notes,
+                config=OmegaConf.to_container(self.config, resolve=True),
             )
 
         # Execute all initialization work queued so far before starting training.
@@ -155,6 +174,7 @@ class BaseTrainer:
                     config.trainer.optimizer.beta1,
                     config.trainer.optimizer.beta2,
                 ),
+                update_clip=config.trainer.optimizer.update_clip,
             )
 
         elif config.trainer.optimizer.type == _ADAFACTOR:
@@ -261,6 +281,9 @@ class BaseTrainer:
     
 
     def train_loop(self) -> None:
+
+        for p in self.model.parameters():
+            p.requires_grad_(True)
         self.model.train()
         self.model.zero_grad()
 
@@ -283,6 +306,7 @@ class BaseTrainer:
                 epoch += 1
                 train_iterator = iter(train_loader)
                 batch = next(train_iterator)
+            self.step = step
 
             # when context parallel and load balance context parallel is enabled,
             # we will reorder the sequence here for each batch
@@ -363,7 +387,16 @@ class BaseTrainer:
         
         loss, aux = self.forward(batch)
 
+        # mean_reduce = lambda x: xf.all_reduce(
+        #     xm.REDUCE_SUM, x, scale=1.0 / xr.process_count()
+        # )
+        # loss = mean_reduce(loss)
+        # for k, v in aux.items():
+        #     if isinstance(v, torch.Tensor):
+        #         aux[k] = mean_reduce(v)
+
         loss.backward()
+        # xm.reduce_gradients(self.optimizer)
         
         gard_norm = self.clip_gradients()
         self.optimizer.step()

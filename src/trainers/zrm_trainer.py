@@ -124,8 +124,8 @@ class ZRMTrainer(BaseTrainer):
         kl_loss = (
             self.config.trainer.kl_weight * aux["enc_kl_per_token"] +
             self.config.trainer.kl_weight * aux["alpha_kl_per_token"] +
-            aux["gen_kl_per_token"] + 
-            # aux['uniformity_weight_scaled'] * aux["uniformity_loss"]
+            aux["gen_kl_per_token"]
+            # + aux['uniformity_weight_scaled'] * aux["uniformity_loss"]
         )
         loss = aux['lm_loss'] + kl_loss
 

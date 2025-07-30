@@ -16,6 +16,7 @@ import os
 from timeit import default_timer as timer
 import shutil
 import json
+import numpy as np
 
 import torch
 import torch.nn.utils as nn_utils
@@ -279,7 +280,8 @@ class BaseTrainer:
             logger.info(f"Saved config to {save_path}/config.json")
 
             logger.info(f"Saving model state to {save_path}")
-            torch.save(state, os.path.join(save_path, "model.pt"))
+            np_state = {k: v.numpy() for k, v in state.items()}
+            np.save(os.path.join(save_path, "model.npy"), np_state)
             logger.info(f"Saved model state to {save_path}/model.pt")
             
             api = hf.HfApi()

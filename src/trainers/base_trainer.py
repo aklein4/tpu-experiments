@@ -272,6 +272,7 @@ class BaseTrainer:
                 constants.LOCAL_DATA_PATH,
                 "tmp_checkpoint",
             )
+            shutil.rmtree(save_path, ignore_errors=True)
             os.makedirs(save_path, exist_ok=True)
 
             logger.info(f"Saving config to {save_path}")
@@ -280,9 +281,10 @@ class BaseTrainer:
             logger.info(f"Saved config to {save_path}/config.json")
 
             logger.info(f"Saving model state to {save_path}")
-            np_state = {k: v.numpy() for k, v in state.items()}
-            print({k: np.reshape(v, (-1,))[:10] for k, v in np_state.items()})
-            np.save(os.path.join(save_path, "model.npy"), np_state)
+            torch.save(state, os.path.join(save_path, "model.pt"))
+            # np_state = {k: v.numpy() for k, v in state.items()}
+            # print({k: np.reshape(v, (-1,))[:10] for k, v in np_state.items()})
+            # np.save(os.path.join(save_path, "model.npy"), np_state)
             logger.info(f"Saved model state to {save_path}/model.pt")
             
             api = hf.HfApi()

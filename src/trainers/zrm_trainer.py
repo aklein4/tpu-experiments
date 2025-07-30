@@ -27,6 +27,11 @@ def per_token(x, labels, pad_token_id):
     return x.sum() / ((labels != pad_token_id).float().sum() + 1)
 
 
+def effective_parties(x):
+    p = x / (x.sum() + 1e-5)
+    return 1 / p.pow(2).sum()
+
+
 class ZRMTrainer(BaseTrainer):
 
     model: ZRMModel
@@ -63,6 +68,7 @@ class ZRMTrainer(BaseTrainer):
         )
         aux['kl_per_token'] = per_token(kl, labels, pad_token_id)
         aux['elbo'] = aux['lm_loss'] + aux['kl_per_token']
+        aux['kl_parties'] = effective_parties(kl.mean(0))
         w_kl = get_w_kl(kl)
 
         # kl with respect to the encoder
@@ -96,6 +102,7 @@ class ZRMTrainer(BaseTrainer):
             out['encoder_mu'].mean(dim=0, keepdim=True)
         )
         aux["mean_kl_per_token"] = per_token(kl_mean, labels, pad_token_id)
+        aux["mean_kl_parties"] = effective_parties(kl_mean.mean(0))
 
         # uniformity loss
         # aux['uniformity_weight_scaled'] = self.config.trainer.uniformity_weight * (

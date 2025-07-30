@@ -14,7 +14,7 @@ optimizer:
   type: adamw
 
   learning_rate: 1.0e-4
-  weight_decay: 0.1
+  weight_decay: 0.01
 
   beta1: 0.9
   beta2: 0.95
@@ -40,9 +40,12 @@ max_grad_value: null
 enc_kl_start: 5000
 enc_kl_warmup: 5000
 
-kl_weight: 0.2
+gen_grad_start: 2500
+gen_grad_warmup: 2500
 
-noise_warmup: 2000  # Number of steps to linearly increase noise scale from 0 to 1
+noise_warmup: 2500
+
+kl_weight: 0.2
 
 # uniformity_temp: 2.0
 # uniformity_weight: 1.0

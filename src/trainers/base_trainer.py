@@ -257,7 +257,7 @@ class BaseTrainer:
         # move the model to CPU for saving
         logger.info("Moving model to CPU for checkpoint saving...")
         state = {
-            k: xs.clear_sharding(v).cpu()
+            k: xs.clear_sharding(v)
             for k, v in self.model.state_dict().items()
         }
         xm.mark_step()
@@ -273,7 +273,7 @@ class BaseTrainer:
             os.makedirs(save_path, exist_ok=True)
 
             logger.info(f"Saving checkpoint to {save_path}")
-            torch.save(state, os.path.join(save_path, "model.pt"))
+            xm.save(state, os.path.join(save_path, "model.pt"))
             with open(os.path.join(save_path, "config.json"), "w") as f:
                 json.dump(OmegaConf.to_container(self.config, resolve=True), f, indent=4)
             logger.info(f"Saved checkpoint to {save_path}")

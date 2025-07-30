@@ -250,14 +250,19 @@ class BaseTrainer:
     ):
         logger.info("[SAVING] Starting distributed checkpoint...")
 
+        # wait for existing operations
         xm.wait_device_ops()
         xm.rendezvous(f"checkpoint_start_{step}")
 
+        # move the model to CPU for saving
         logger.info("Moving model to CPU for checkpoint saving...")
         state = {
             k: xs.clear_sharding(v)
             for k, v in self.model.state_dict().items()
         }
+        xm.mark_step()
+        xm.wait_device_ops()
+        xm.rendezvous(f"checkpoint_model_moved_{step}")
 
         if constants.PROCESS_IS_MAIN(): 
 

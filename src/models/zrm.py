@@ -255,12 +255,13 @@ class ZRMModel(nn.Module):
             noise=noise,
         )
         if not self.enc_mu_inited:
+            print("Initializing encoder mu bias and std", flush=True)
             with torch.no_grad():
                 self.enc_mu_bias.add_(-encoder_mu_raw.mean(0).detach())
                 self.enc_mu_std.mul_(1 / encoder_mu_raw.std(0).detach())
             self.enc_mu_inited = True
         encoder_mu_raw = F.rms_norm(
-            (encoder_mu_raw * self.enc_mu_std[None]) + self.enc_mu_bias[None],
+            (encoder_mu_raw + self.enc_mu_bias[None]) * self.enc_mu_std[None],
             [self.z_size],
             eps=self.config.rms_norm_eps
         )

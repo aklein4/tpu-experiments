@@ -257,12 +257,13 @@ class BaseTrainer:
         # move the model to CPU for saving
         logger.info("Moving model to CPU for checkpoint saving...")
         state = {
-            k: xs.clear_sharding(v.clone()).cpu()
+            k: xs.clear_sharding(v.clone()).detach().cpu()
             for k, v in self.model.state_dict().items()
         }
         xm.mark_step()
         xm.wait_device_ops()
         xm.rendezvous(f"checkpoint_model_moved_{step}")
+        logger.info("Moded model to CPU for checkpoint saving.")
 
         if constants.PROCESS_IS_MAIN(): 
 
@@ -272,18 +273,19 @@ class BaseTrainer:
             )
             os.makedirs(save_path, exist_ok=True)
 
-            logger.info(f"Saving checkpoint to {save_path}")
-            print({k: v.device for k, v in state.items()}, flush=True)
-            print({k: v.view(-1)[0] for k, v in state.items()}, flush=True)
-            torch.save(state, os.path.join(save_path, "model.pt"))
-            logger.info(f"Saved model state to {save_path}/model.pt")
+            logger.info(f"Saving config to {save_path}")
             with open(os.path.join(save_path, "config.json"), "w") as f:
                 json.dump(OmegaConf.to_container(self.config, resolve=True), f, indent=4)
-            logger.info(f"Saved checkpoint to {save_path}")
+            logger.info(f"Saved config to {save_path}/config.json")
 
+            logger.info(f"Saving model state to {save_path}")
+            torch.save(state, os.path.join(save_path, "model.pt"))
+            logger.info(f"Saved model state to {save_path}/model.pt")
+            
             api = hf.HfApi()
             out_path = f"{step:012d}"
 
+            logger.info(f"Uploading checkpoint to {self.repo_name}")
             api.upload_folder(
                 repo_id=self.repo_name,
                 folder_path=save_path,

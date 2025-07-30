@@ -196,7 +196,7 @@ class ZRMModel(nn.Module):
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
-        self.encoder_noise_proj_in.weight.data.mul_(0.01)
+        self.encoder_noise_proj_in.weight.data.mul_(0.0)
 
 
     def _init_weights(self, module: nn.Module):
@@ -256,6 +256,8 @@ class ZRMModel(nn.Module):
             noise=noise,
         )
         if not self.enc_mu_inited:
+            # this triggers a recompile after the first step
+            # but it's fine because the second step recompiles anyway
             print("Initializing encoder mu bias and std", flush=True)
             with torch.no_grad():
                 self.enc_mu_bias.add_(-encoder_mu_raw.mean(0).detach())

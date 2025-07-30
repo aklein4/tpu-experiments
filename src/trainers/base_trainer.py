@@ -22,6 +22,7 @@ import torch.nn.utils as nn_utils
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
+import torch_xla.distributed.spmd as xs
 import torch_xla.runtime as xr
 from torch_xla.core import functions as xf
 
@@ -252,6 +253,12 @@ class BaseTrainer:
         xm.wait_device_ops()
         xm.rendezvous(f"checkpoint_start_{step}")
 
+        logger.info("Moving model to CPU for checkpoint saving...")
+        state = {
+            k: xs.clear_sharding(v)
+            for k, v in self.model.state_dict().items()
+        }
+
         if constants.PROCESS_IS_MAIN(): 
 
             save_path = os.path.join(
@@ -261,7 +268,7 @@ class BaseTrainer:
             os.makedirs(save_path, exist_ok=True)
 
             logger.info(f"Saving checkpoint to {save_path}")
-            xm.save(self.model.state_dict(), os.path.join(save_path, "model.pt"))
+            torch.save(state, os.path.join(save_path, "model.pt"))
             with open(os.path.join(save_path, "config.json"), "w") as f:
                 json.dump(OmegaConf.to_container(self.config, resolve=True), f, indent=4)
             logger.info(f"Saved checkpoint to {save_path}")

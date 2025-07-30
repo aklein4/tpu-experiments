@@ -23,6 +23,7 @@ class LLMTrainer(BaseTrainer):
 
         loss = losses['loss']
         aux = {
+            'lm_loss': loss,
             'acc': losses['acc'],
             'pcorr': losses['pcorr'],
 

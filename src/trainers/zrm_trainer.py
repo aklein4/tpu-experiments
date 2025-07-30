@@ -29,7 +29,8 @@ def per_token(x, labels, pad_token_id):
 
 def effective_parties(x):
     p = x / (x.sum() + 1e-5)
-    return 1 / p.pow(2).sum()
+    parties = 1 / p.pow(2).sum()
+    return parties / x.numel()
 
 
 class ZRMTrainer(BaseTrainer):

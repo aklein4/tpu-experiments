@@ -144,23 +144,23 @@ class ZRMModel(nn.Module):
         )
 
         self.generator_input_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.randn(1, self.hidden_size) / self.lr_scaler
         )
         self.generator_z_tokens = nn.Parameter(
-                torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
+            torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
         )
 
         self.decoder_input_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.randn(1, self.hidden_size) / self.lr_scaler
         )
         self.decoder_z_tokens = nn.Parameter(
-                torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
+            torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
         )
         self.decoder_start_output_token = nn.Parameter(
-                torch.randn(self.hidden_size) / self.lr_scaler
+            torch.randn(self.hidden_size) / self.lr_scaler
         )
         self.decoder_output_emb = nn.Parameter(
-                torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.randn(1, self.hidden_size) / self.lr_scaler
         )
 
         # z/noise io components
@@ -172,15 +172,21 @@ class ZRMModel(nn.Module):
         )
 
         self.generator_z_proj_in = nn.Linear(
-                self.z_size, self.hidden_size, bias=False
+            self.z_size, self.hidden_size, bias=False
         )
         self.generator_mu_proj_out = nn.Linear(
-                self.hidden_size, self.z_size, bias=False
+            self.hidden_size, self.z_size, bias=False
         )
 
         self.decoder_z_proj_in = nn.Linear(
-                self.z_size, self.hidden_size, bias=False
+            self.z_size, self.hidden_size, bias=False
         )
+
+        # bias to help with initialization
+        self.enc_mu_bias = nn.Parameter(
+            torch.zeros(self.z_length, self.z_size)
+        )
+        self.enc_mu_inited = False
 
         # scaling components
         self.log_alpha = nn.Parameter(torch.tensor([0.0] * 64) / self.lr_scaler)
@@ -245,8 +251,12 @@ class ZRMModel(nn.Module):
             output_bias=output_bias,
             noise=noise,
         )
+        if not self.enc_mu_inited:
+            with torch.no_grad():
+                self.enc_mu_bias.add_(-encoder_mu_raw.mean(0).detach())
+            self.enc_mu_inited = True
         encoder_mu_raw = F.rms_norm(
-            encoder_mu_raw,
+            encoder_mu_raw + self.enc_mu_bias[None],
             [self.z_size],
             eps=self.config.rms_norm_eps
         )

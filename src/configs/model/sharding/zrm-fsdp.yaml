@@ -69,6 +69,8 @@ generator_mu_proj_out.weight: [null, fsdp]
 
 decoder_z_proj_in.weight: [fsdp, null]
 
+enc_mu_bias: [fsdp, null]
+
 log_alpha: [fsdp]
 
 # Activations

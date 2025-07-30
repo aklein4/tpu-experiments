@@ -42,5 +42,7 @@ enc_kl_warmup: 5000
 
 kl_weight: 0.2
 
+noise_warmup: 2000  # Number of steps to linearly increase noise scale from 0 to 1
+
 # uniformity_temp: 2.0
 # uniformity_weight: 1.0

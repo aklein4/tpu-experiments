@@ -41,9 +41,14 @@ class ZRMTrainer(BaseTrainer):
         pad_token_id = self.model.config.pad_token_id
         labels = batch['output_ids']
 
+        noise_scale = np.clip(
+            self.step / self.config.trainer.noise_warmup,
+            0.0, 1.0
+        )
         out = self.model(
             input_ids=batch['input_ids'],
             output_ids=batch['output_ids'],
+            noise_scale=noise_scale,
         )
 
         # handle LM
@@ -60,6 +65,8 @@ class ZRMTrainer(BaseTrainer):
             'pcorr': lm_losses['pcorr'],
         
             'alpha': out['alpha'],
+            'noise_scale': noise_scale,
+            'z_scale': out['z_scale'],
         }
 
         # get basic KL stuff

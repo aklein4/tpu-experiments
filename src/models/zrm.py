@@ -205,6 +205,7 @@ class ZRMModel(nn.Module):
         input_ids: torch.LongTensor,
         output_ids: torch.LongTensor,
         z_grad_scale: float = 1.0,
+        noise_scale: float = 1.0,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         assert input_ids.shape[-1] == self.input_length
         assert output_ids.shape[-1] == self.output_length
@@ -213,8 +214,10 @@ class ZRMModel(nn.Module):
         alpha = F.softplus(
             self.log_alpha.mean() * self.lr_scaler
         ) / np.log(2.0)
-        # alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
+        alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
         # alpha = np.sqrt(np.log(self.vocab_size) / self.z_size)
+
+        z_scale = 1 / torch.sqrt(alpha**2 + noise_scale**2)
 
         # get reusable components
         input_tokens = self.embed_tokens(input_ids) * self.lr_scaler
@@ -229,7 +232,7 @@ class ZRMModel(nn.Module):
         # get the noise
         noise = torch.randn_like(
             input_tokens[:, :self.z_length, :self.z_size],
-        )
+        ) * noise_scale
 
         # run the encoder
         encoder_mu_raw = self.encode(
@@ -253,7 +256,7 @@ class ZRMModel(nn.Module):
             input_tokens=input_tokens,
             input_mask=input_mask,
             input_bias=input_bias,
-            z=(encoder_mu + noise)
+            z=(encoder_mu + noise) * z_scale,
         )
         generator_mu = generator_mu_raw * alpha
 
@@ -269,7 +272,7 @@ class ZRMModel(nn.Module):
             output_mask=output_mask,
             input_bias=input_bias,
             output_bias=output_bias,
-            z=decoder_z,
+            z=decoder_z * z_scale,
         )
 
         return {
@@ -279,6 +282,7 @@ class ZRMModel(nn.Module):
             "encoder_mu_raw": encoder_mu_raw,
             "generator_mu_raw": generator_mu_raw,
             "alpha": alpha,
+            "z_scale": z_scale,
         }
     
 

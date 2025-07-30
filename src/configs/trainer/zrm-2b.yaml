@@ -40,7 +40,7 @@ max_grad_value: null
 enc_kl_start: 5000
 enc_kl_warmup: 5000
 
-gen_grad_start: 1
+gen_grad_start: -100
 gen_grad_warmup: 1
 
 noise_warmup: 2000

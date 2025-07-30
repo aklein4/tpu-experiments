@@ -282,7 +282,7 @@ class BaseTrainer:
             logger.info(f"Saving model state to {save_path}")
             np_state = {k: v.numpy() for k, v in state.items()}
             print({k: np.reshape(v, (-1,))[:10] for k, v in np_state.items()})
-            # np.save(os.path.join(save_path, "model.npy"), np_state)
+            save np.save(os.path.join(save_path, "model.npy"), np_state)
             logger.info(f"Saved model state to {save_path}/model.pt")
             
             api = hf.HfApi()

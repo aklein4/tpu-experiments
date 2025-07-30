@@ -223,7 +223,7 @@ class ZRMModel(nn.Module):
 
         # get the real alpha value
         alpha = F.softplus(
-            self.log_alpha.mean() * self.lr_scaler
+            self.log_alpha.mean() # * self.lr_scaler
         ) / np.log(2.0)
         alpha = alpha * np.sqrt(np.log(self.vocab_size) / self.z_size)
         # alpha = np.sqrt(np.log(self.vocab_size) / self.z_size)

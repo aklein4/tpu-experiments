@@ -274,6 +274,7 @@ class BaseTrainer:
 
             logger.info(f"Saving checkpoint to {save_path}")
             print({k: v.device for k, v in state.items()}, flush=True)
+            print({k: v.view(-1)[0] for k, v in state.items()}, flush=True)
             torch.save(state, os.path.join(save_path, "model.pt"))
             logger.info(f"Saved model state to {save_path}/model.pt")
             with open(os.path.join(save_path, "config.json"), "w") as f:

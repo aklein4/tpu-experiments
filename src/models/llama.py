@@ -24,14 +24,13 @@ from omegaconf import DictConfig
 from torch import nn
 from transformers.activations import ACT2FN
 from transformers.utils import logging
+import math
 
 from torchprime.layers.sequential import HomogeneousSequential
 from torchprime.rope.rope import RopeScaling, llama3_rope_frequencies
 from torchprime.torch_xla_models import offloading
 from torchprime.torch_xla_models.attention import AttentionModule
 from torchprime.torch_xla_models.loss import cross_entropy_loss
-
-from models.xla import BaseXLAModel
 
 
 logger = logging.get_logger(__name__)
@@ -404,7 +403,7 @@ class LlamaModel(nn.Module):
         return hidden_states
 
 
-class LlamaForCausalLM(BaseXLAModel):
+class LlamaForCausalLM(nn.Module):
     def __init__(self, config):
         super().__init__()
 
@@ -413,6 +412,8 @@ class LlamaForCausalLM(BaseXLAModel):
 
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+
+        self.lr_scaler = math.sqrt(config.hidden_size)
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
@@ -426,7 +427,7 @@ class LlamaForCausalLM(BaseXLAModel):
                 module.bias.data.zero_()
 
         elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=1.0)
+            module.weight.data.normal_(mean=0.0, std=1/self.lr_scaler)
 
 
     @xp.trace_me("LlamaForCausalLM")
@@ -438,7 +439,11 @@ class LlamaForCausalLM(BaseXLAModel):
         shift_states: bool = False,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         
-        hidden_states = self.model(input_ids=input_ids, attention_mask=attention_mask)
+        inputs_embeds = self.model.embed_tokens(input_ids) * self.lr_scaler
+        hidden_states = self.model(
+            inputs_embeds=inputs_embeds,
+            attention_mask=attention_mask
+        )
 
         if shift_states:
             # Shift the hidden states to the right for causal language modeling

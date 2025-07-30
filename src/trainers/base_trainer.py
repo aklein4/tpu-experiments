@@ -274,7 +274,7 @@ class BaseTrainer:
 
             logger.info(f"Saving checkpoint to {save_path}")
             print({k: v.device for k, v in state.items()}, flush=True)
-            xm.save(state, os.path.join(save_path, "model.pt"))
+            torch.save(state, os.path.join(save_path, "model.pt"))
             with open(os.path.join(save_path, "config.json"), "w") as f:
                 json.dump(OmegaConf.to_container(self.config, resolve=True), f, indent=4)
             logger.info(f"Saved checkpoint to {save_path}")

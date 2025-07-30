@@ -131,27 +131,27 @@ class ZRMModel(nn.Module):
 
         # input embeddings
         self.encoder_input_emb = nn.Parameter(
-            torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
         self.encoder_sep_token = nn.Parameter(
             torch.randn(self.hidden_size) / self.lr_scaler
         )
         self.encoder_output_emb = nn.Parameter(
-            torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
         self.encoder_z_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
         )
 
         self.generator_input_emb = nn.Parameter(
-            torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
         self.generator_z_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
         )
 
         self.decoder_input_emb = nn.Parameter(
-            torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
         self.decoder_z_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
@@ -160,7 +160,7 @@ class ZRMModel(nn.Module):
             torch.randn(self.hidden_size) / self.lr_scaler
         )
         self.decoder_output_emb = nn.Parameter(
-            torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
 
         # z/noise io components
@@ -196,6 +196,7 @@ class ZRMModel(nn.Module):
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
+        self.encoder_noise_proj_in.weight.data.mul_(0.01)
 
 
     def _init_weights(self, module: nn.Module):

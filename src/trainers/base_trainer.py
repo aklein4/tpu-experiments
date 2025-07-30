@@ -257,7 +257,7 @@ class BaseTrainer:
         # move the model to CPU for saving
         logger.info("Moving model to CPU for checkpoint saving...")
         state = {
-            k: xs.clear_sharding(v)
+            k: xs.clear_sharding(v).cpu()
             for k, v in self.model.state_dict().items()
         }
         xm.mark_step()

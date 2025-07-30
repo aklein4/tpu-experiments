@@ -186,6 +186,9 @@ class ZRMModel(nn.Module):
         self.enc_mu_bias = nn.Parameter(
             torch.zeros(self.z_length, self.z_size)
         )
+        self.enc_mu_std = nn.Parameter(
+            torch.ones(self.z_length, self.z_size)
+        )
         self.enc_mu_inited = False
 
         # scaling components
@@ -254,9 +257,10 @@ class ZRMModel(nn.Module):
         if not self.enc_mu_inited:
             with torch.no_grad():
                 self.enc_mu_bias.add_(-encoder_mu_raw.mean(0).detach())
+                self.enc_mu_std.mul_(1 / encoder_mu_raw.std(0).detach())
             self.enc_mu_inited = True
         encoder_mu_raw = F.rms_norm(
-            encoder_mu_raw + self.enc_mu_bias[None],
+            (encoder_mu_raw * self.enc_mu_std[None]) + self.enc_mu_bias[None],
             [self.z_size],
             eps=self.config.rms_norm_eps
         )

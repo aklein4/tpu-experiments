@@ -37,13 +37,14 @@ max_grad_norm: 1.0
 # Set to a number to clip gradients by the specified max absolute value.
 max_grad_value: null
 
-enc_kl_start: 5000
-enc_kl_warmup: 5000
+noise_wait: 0
+noise_warmup: 2500
 
-gen_grad_start: 3000
-gen_grad_warmup: 1000
+gen_grad_wait: 5000
+gen_grad_warmup: 2500
 
-noise_warmup: 2000
+enc_kl_wait: 10000
+enc_kl_warmup: 2500
 
 kl_weight: 0.2
 

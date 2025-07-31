@@ -33,6 +33,18 @@ def effective_parties(x):
     return parties / x.numel()
 
 
+def cosine_schedule(
+    step,
+    wait_steps,
+    warmup_steps,
+):
+    t = np.clip(
+        (step.float() - wait_steps) / warmup_steps,
+        0.0, 1.0
+    )
+    return 0.5 * (1 - torch.cos(np.pi * t))
+
+
 class ZRMTrainer(BaseTrainer):
 
     model: ZRMModel
@@ -41,13 +53,16 @@ class ZRMTrainer(BaseTrainer):
         pad_token_id = self.model.config.pad_token_id
         labels = batch['output_ids']
 
-        gen_grad_scale = np.clip(
-            (self.step - self.config.trainer.gen_grad_start) / self.config.trainer.gen_grad_warmup,
-            0.0, 1.0
+        if not hasattr(self, 'acc_step'):
+            self.acc_step = torch.zeros_like(labels.view(-1).long()).sum()
+        if not hasattr(self, 'activated'):
+            self.activated = torch.zeros_like(self.acc_step.bool()).any()
+
+        gen_grad_scale = cosine_schedule(
+            self.acc_step, self.config.trainer.gen_grad_wait, self.config.trainer.gen_grad_warmup
         )
-        noise_scale = np.clip(
-            self.step / self.config.trainer.noise_warmup,
-            0.0, 1.0
+        noise_scale = cosine_schedule(
+            self.acc_step, self.config.trainer.noise_wait, self.config.trainer.noise_warmup
         )
 
         out = self.model(
@@ -65,6 +80,10 @@ class ZRMTrainer(BaseTrainer):
             shift_labels=False,
             shift_logits=False
         )
+        self.activated = (
+            self.activated | (lm_losses['acc'] >= self.config.trainer.acc_threshold).any()
+        )
+        self.acc_step += self.activated.long().sum()
         aux = {
             'lm_loss': lm_losses['loss'],
             'acc': lm_losses['acc'],
@@ -73,8 +92,13 @@ class ZRMTrainer(BaseTrainer):
             'alpha': out['alpha'],
             'z_scale': out['z_scale'],
 
+            'acc_step': self.acc_step,
+            'activated': self.activated.long(),
+
             'gen_grad_scale': gen_grad_scale,
             'noise_scale': noise_scale,
+
+            'frac_labelled': (labels != pad_token_id).float().mean(),
         }
 
         # get basic KL stuff
@@ -88,9 +112,8 @@ class ZRMTrainer(BaseTrainer):
         w_kl = get_w_kl(kl)
 
         # kl with respect to the encoder
-        aux['enc_kl_scale'] = np.clip(
-            (self.step - self.config.trainer.enc_kl_start) / self.config.trainer.enc_kl_warmup,
-            0.0, 1.0
+        aux['enc_kl_scale'] = cosine_schedule(
+            self.acc_step, self.config.trainer.enc_kl_wait, self.config.trainer.enc_kl_warmup
         )
         kl_enc = kl_div(
             out['alpha'].detach() * scale_gradient(out['encoder_mu_raw'], aux['enc_kl_scale']),

@@ -38,7 +38,7 @@ def cosine_schedule(
     wait_steps,
     warmup_steps,
 ):
-    t = np.clip(
+    t = torch.clip(
         (step.float() - wait_steps) / warmup_steps,
         0.0, 1.0
     )

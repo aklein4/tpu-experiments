@@ -46,6 +46,8 @@ gen_grad_warmup: 2500
 enc_kl_wait: 10000
 enc_kl_warmup: 2500
 
+acc_threshold: 0.75
+
 kl_weight: 0.2
 
 # uniformity_temp: 2.0

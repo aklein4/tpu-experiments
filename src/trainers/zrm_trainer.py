@@ -152,6 +152,7 @@ class ZRMTrainer(BaseTrainer):
         # the loss
         loss = (
             aux['lm_loss'] +
+            aux['input_lm_loss'] +
             self.config.trainer.kl_weight * aux['base_kl_per_token']
         )
 

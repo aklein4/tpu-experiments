@@ -64,11 +64,15 @@ class ZRMTrainer(BaseTrainer):
         alpha = cosine_schedule(
             self.threshold_step, self.config.trainer.alpha_wait, self.config.trainer.alpha_warmup, up=False
         ) * np.sqrt(2 * self.config.trainer.alpha_scale / self.model.z_size)
+        noise_scale = cosine_schedule(
+            self.threshold_step, self.config.trainer.noise_wait, self.config.trainer.noise_warmup, up=True
+        )
 
         out = self.model(
             input_ids=batch['input_ids'],
             output_ids=batch['output_ids'],
             alpha=alpha,
+            noise_scale=noise_scale,
         )
 
         # handle LM
@@ -89,6 +93,7 @@ class ZRMTrainer(BaseTrainer):
             'pcorr': lm_losses['pcorr'],
         
             'alpha': alpha,
+            'noise_scale': noise_scale,
             'z_scale': out['z_scale'],
 
             'threshold_step': self.threshold_step,

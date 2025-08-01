@@ -74,72 +74,50 @@ class LoRaModulator(nn.Module):
         )
 
 
-class ZAttention(nn.Module):
-    """Multi-headed attention from 'Attention Is All You Need' paper"""
+class LoRaConditioner(nn.Module):
 
-    def __init__(self, config):
-        super().__init__()
-        self.config = config
-        self.attention_block = AttentionModule(config, causal=False, attention_kernel="other")
-
-        self.hidden_size = config.hidden_size
-        self.num_heads = config.num_attention_heads
-        self.head_dim = self.hidden_size // self.num_heads
-        self.num_z_k = config.num_z_k
-        self.num_key_value_heads = 1
-        self.num_key_value_groups = self.num_heads // self.num_key_value_heads
-
-        if (self.head_dim * self.num_heads) != self.hidden_size:
-            raise ValueError(
-                f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
-                f" and `num_heads`: {self.num_heads})."
-            )
-
-        self.q_proj = nn.Linear(
-            self.hidden_size,
-            self.num_heads * self.head_dim,
-            bias=config.attention_bias,
-        )
-        self.k = nn.Parameter(
-            torch.randn(self.num_z_k, self.head_dim) / np.sqrt(self.hidden_size)
-        )
-        self.o_proj = nn.Linear(
-            self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias
-        )
-
-
-    # @xp.trace_me("LlamaAttention")
-    def forward(
+    def __init__(
         self,
-        hidden_states: torch.Tensor,
-        value_states: torch.Tensor,
-    ) -> torch.FloatTensor:
-        bsz, q_len, _ = hidden_states.shape
-        k_len = value_states.shape[1]
+        base_linear: nn.Linear,
+        rank: int,
+        condition_size: int,
+    ):
+        super().__init__()
 
-        query_states = self.q_proj(hidden_states)
-        key_states = expand_to_batch(self.k * np.sqrt(self.head_dim), query_states)
+        self.base_linear = base_linear
+        self.rank = rank
+        self.condition_size = condition_size
 
-        query_states = query_states.view(
-            bsz, q_len, self.num_heads, self.head_dim
-        ).transpose(1, 2)
-        key_states = key_states.view(
-            bsz, k_len, self.num_key_value_heads, self.head_dim
-        ).transpose(1, 2)
-        value_states = value_states.view(
-            bsz, k_len, self.num_key_value_heads, self.head_dim
-        ).transpose(1, 2)
+        self.in_features = base_linear.in_features
+        self.out_features = base_linear.out_features
 
-        key_states = repeat_kv(key_states, self.num_key_value_groups)
-        value_states = repeat_kv(value_states, self.num_key_value_groups)
-
-        attn_output = self.attention_block(
-            query_states, key_states, value_states, repeat=False
+        self.lora_down = nn.Linear(
+            self.in_features, self.rank, bias=False
         )
-        attn_output = attn_output.transpose(1, 2).contiguous()
-        attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
-        attn_output = self.o_proj(attn_output)
-        return attn_output
+        self.lora_up = nn.Linear(
+            self.rank, self.out_features, bias=False
+        )
+
+        self.condition_in = nn.Linear(
+            self.condition_size, self.rank, bias=False
+        )
+        self.condition = None
+
+
+    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+
+        inner = (
+            self.lora_down(x) * 
+            self.condition_in(self.condition)
+        )
+        outer = self.lora_up(inner)
+
+        self.condition = None
+
+        return (
+            self.base_linear(x) * np.sqrt(0.5) +
+            outer * np.sqrt(0.5)
+        )
 
 
 class ZRMDecoderLayer(nn.Module):
@@ -155,12 +133,16 @@ class ZRMDecoderLayer(nn.Module):
         self.input_layernorm = base_layer.input_layernorm
         self.post_attention_layernorm = base_layer.post_attention_layernorm
 
-        # replace the attention block with ZAttention
-        self.z_norm = LlamaRMSNorm(
-            config.hidden_size,
-            eps=config.rms_norm_eps
+        self.self_attn.qkv_proj = LoRaConditioner(
+            self.self_attn.qkv_proj,
+            config.condition_rank,
+            config.condition_size
         )
-        self.z_attn = ZAttention(config)
+        self.mlp.gate_up_proj = LoRaConditioner(
+            self.mlp.gate_up_proj,
+            config.condition_rank,
+            config.condition_size
+        )
 
 
     def forward(
@@ -172,6 +154,8 @@ class ZRMDecoderLayer(nn.Module):
         elementwise_attention_bias: torch.Tensor | None = None,
         **extra_kwargs,
     ):
+        self.self_attn.qkv_proj.condition = extra_kwargs["condition"]
+        self.mlp.gate_up_proj.condition = extra_kwargs["condition"]
         
         residual = hidden_states
 
@@ -193,34 +177,26 @@ class ZRMDecoderLayer(nn.Module):
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
-        # y = self.z_attn(
-        #     self.z_norm(hidden_states),
-        #     value_states=extra_kwargs['value_states']
-        # )
-        # hidden_states = hidden_states + y
-
         return hidden_states
 
 
-class ZState(nn.Module):
+class ZCondition(nn.Module):
 
     def __init__(self, config):
         super().__init__()
 
         self.config = config
+        self.z_length = config.z_length
+        self.z_size = config.z_size
+        self.condition_size = config.condition_size
 
-        self.num_z_k = config.num_z_k
-        self.total_z_state = (
-            self.num_z_k * 
-            (config.hidden_size // config.num_attention_heads)
-        )
         self.z_to_state = nn.Linear(
-            config.z_size,
-            self.total_z_state,
+            self.z_size,
+            self.condition_size,
             bias=False
         )
         self.z_state_weights = nn.Parameter(
-            torch.randn(config.z_length, self.total_z_state) / np.sqrt(config.hidden_size)
+            torch.randn(self.z_length, self.condition_size) / np.sqrt(config.hidden_size)
         )
     
 
@@ -228,15 +204,10 @@ class ZState(nn.Module):
         self,
         z: torch.FloatTensor,
     ):
-        return z
-
         z_weights = torch.softmax(self.z_state_weights * np.sqrt(self.config.hidden_size), dim=0)[None]
-        z_values = (self.z_to_state(z) * z_weights).sum(dim=1)
-        z_values = z_values.view(
-            z.shape[0], self.num_z_k, self.config.hidden_size // self.config.num_attention_heads
-        ) 
-
-        return z_values
+        
+        return (self.z_to_state(z) * z_weights).sum(dim=1)
+        
 
 
 class ZRMModel(nn.Module):
@@ -256,7 +227,7 @@ class ZRMModel(nn.Module):
         self.output_length = config.output_length
         self.z_length = config.z_length
         
-        self.z_state_module = ZState(config)
+        self.z_conditioner = ZCondition(config)
 
         # transformers
         self.encoder = LlamaModel(config)
@@ -634,7 +605,7 @@ class ZRMModel(nn.Module):
     ):
 
         # construct the z state
-        z_values = self.z_state_module(z)
+        condition = self.z_conditioner(z)
 
         # construct the decoder input
         input_states = (
@@ -695,7 +666,7 @@ class ZRMModel(nn.Module):
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias,
             **{
-                "value_states": z_values,
+                "condition": condition,
             }
         )
         

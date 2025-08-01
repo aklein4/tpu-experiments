@@ -117,7 +117,7 @@ class ZAttention(nn.Module):
         bsz, q_len, _ = hidden_states.shape
 
         query_states = self.q_proj(hidden_states)
-        key_states = self.k[None] * np.sqrt(self.head_dim)
+        key_states = expand_to_batch(self.k * np.sqrt(self.head_dim), query_states)
 
         query_states = query_states.view(
             bsz, q_len, self.num_heads, self.head_dim

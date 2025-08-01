@@ -663,7 +663,7 @@ class ZRMModel(nn.Module):
         
         # get the lm head logits
         input_logits = self.lm_head(decoder_states[:, :self.input_length])
-        output_logits = self.lm_head(decoder_states[:, -self.ouput_length:])
+        output_logits = self.lm_head(decoder_states[:, -self.output_length:])
 
         return input_logits, output_logits
     

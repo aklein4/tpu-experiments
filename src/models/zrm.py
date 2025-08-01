@@ -589,7 +589,7 @@ class ZRMModel(nn.Module):
         # construct the z state
         z_weights = torch.softmax(self.z_state_weights * self.lr_scaler, dim=0)[None]
         z_values = self.z_to_state(z).view(
-            z.shape[0], self.num_z_k, self.hidden_size // self.config.num_key_value_heads
+            z.shape[0], self.num_z_k, self.hidden_size // self.config.num_attention_heads
         ) * z_weights
 
         # construct the decoder input

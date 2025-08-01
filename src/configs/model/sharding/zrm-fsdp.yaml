@@ -77,7 +77,7 @@ enc_mu_extra_bias: [fsdp, null]
 enc_mu_extra_std: [fsdp, null]
 
 # extras
-z_conditioner.z_state_weight: [fsdp, null] 
+z_conditioner.z_state_weights: [fsdp, null] 
 z_conditioner.z_to_state.weight: [fsdp, null]
 
 # Activations

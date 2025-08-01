@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from torchprime.torch_xla_models.attention import AttentionModule
+from torchprime.torch_xla_models.scan_layers import HomogeneousSequential
 
 from models.llama import LlamaModel, LlamaRMSNorm
 from utils.torch_utils import (
@@ -244,8 +245,8 @@ class ZRMModel(nn.Module):
             
             transformer.embed_tokens = None
 
-        self.decoder.layers = nn.Sequential(
-            *[
+        self.decoder.layers = HomogeneousSequential(
+            [
                 ZRMDecoderLayer(base_layer, config)
                 for base_layer in self.decoder.layers
             ]

@@ -69,8 +69,8 @@ generator_mu_proj_out.weight: [null, fsdp]
 enc_mu_extra_bias: [fsdp, null]
 enc_mu_extra_std: [fsdp, null]
 
-z_to_state.weight: [null, fsdp]
-z_state_weights: [null, fsdp]
+z_state_module.z_to_state.weight: [null, fsdp]
+z_state_module.z_state_weights: [null, fsdp]
 
 # Activations
 # decoder.layers.*: [[data, fsdp], null, null]

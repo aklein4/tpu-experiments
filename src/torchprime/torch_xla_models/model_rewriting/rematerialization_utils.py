@@ -72,7 +72,10 @@ def add_activation_checkpointing_and_scan(
       )
 
   def maybe_checkpoint(mod: nn.Module, _name: str) -> nn.Module:
-    if isinstance(mod, tuple(remat_classes)):
+    if (
+      isinstance(mod, tuple(remat_classes))
+      and not hasattr(mod, "no_remat")
+    ):
       return checkpoint_module(mod)
     return mod
 
@@ -121,7 +124,10 @@ def add_optimization_barriers(model: nn.Module, config: DictConfig) -> nn.Module
   logger.info("Adding backward optimization barriers to %s", classes)
 
   def maybe_add_barrier(mod: nn.Module, _name: str) -> nn.Module:
-    if isinstance(mod, tuple(classes)):
+    if (
+      isinstance(mod, tuple(classes))
+      and not hasattr(mod, "no_remat")
+    ):
       xs.apply_backward_optimization_barrier(mod)
     return mod
 

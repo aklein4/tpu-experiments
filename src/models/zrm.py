@@ -148,6 +148,7 @@ class ZRMDecoderLayer(nn.Module):
         super().__init__()
 
         self.base_layer = base_layer
+        self.base_layer.no_remat = True
 
         # replace the attention block with ZAttention
         self.z_norm = LlamaRMSNorm(
@@ -184,6 +185,42 @@ class ZRMDecoderLayer(nn.Module):
         return hidden_states
 
 
+class ZState(nn.Module):
+
+    def __init__(self, config):
+        super().__init__()
+
+        self.config = config
+
+        self.num_z_k = config.num_z_k
+        self.total_z_state = (
+            self.num_z_k * 
+            (config.hidden_size // config.num_attention_heads)
+        )
+        self.z_to_state = nn.Linear(
+            config.z_size,
+            self.total_z_state,
+            bias=False
+        )
+        self.z_state_weights = nn.Parameter(
+            torch.randn(config.z_length, self.total_z_state) / np.sqrt(config.hidden_size)
+        )
+    
+
+    def forward(
+        self,
+        z: torch.FloatTensor,
+    ):
+
+        z_weights = torch.softmax(self.z_state_weights * np.sqrt(self.config.hidden_size), dim=0)[None]
+        z_values = (self.z_to_state(z) * z_weights).sum(dim=1)
+        z_values = z_values.view(
+            z.shape[0], self.num_z_k, self.hidden_size // self.config.num_attention_heads
+        ) 
+
+        return z_values
+
+
 class ZRMModel(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -201,20 +238,7 @@ class ZRMModel(nn.Module):
         self.output_length = config.output_length
         self.z_length = config.z_length
         
-        # z state config
-        self.num_z_k = config.num_z_k
-        self.total_z_state = (
-            self.num_z_k * 
-            (self.hidden_size // config.num_attention_heads)
-        )
-        self.z_to_state = nn.Linear(
-            self.z_size,
-            self.total_z_state,
-            bias=False
-        )
-        self.z_state_weights = nn.Parameter(
-            torch.randn(self.z_length, self.total_z_state) / self.lr_scaler
-        )
+        self.z_state_module = ZState(config)
 
         # transformers
         self.encoder = LlamaModel(config)
@@ -592,11 +616,7 @@ class ZRMModel(nn.Module):
     ):
 
         # construct the z state
-        z_weights = torch.softmax(self.z_state_weights * self.lr_scaler, dim=0)[None]
-        z_values = (self.z_to_state(z) * z_weights).sum(dim=1)
-        z_values = z_values.view(
-            z.shape[0], self.num_z_k, self.hidden_size // self.config.num_attention_heads
-        ) 
+        z_values = self.z_state_module(z)
 
         # construct the decoder input
         input_states = (

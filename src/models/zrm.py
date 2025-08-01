@@ -115,6 +115,7 @@ class ZAttention(nn.Module):
         value_states: torch.Tensor,
     ) -> torch.FloatTensor:
         bsz, q_len, _ = hidden_states.shape
+        k_len = value_states.shape[1]
 
         query_states = self.q_proj(hidden_states)
         key_states = expand_to_batch(self.k * np.sqrt(self.head_dim), query_states)
@@ -123,10 +124,10 @@ class ZAttention(nn.Module):
             bsz, q_len, self.num_heads, self.head_dim
         ).transpose(1, 2)
         key_states = key_states.view(
-            bsz, q_len, self.num_key_value_heads, self.head_dim
+            bsz, k_len, self.num_key_value_heads, self.head_dim
         ).transpose(1, 2)
         value_states = value_states.view(
-            bsz, q_len, self.num_key_value_heads, self.head_dim
+            bsz, k_len, self.num_key_value_heads, self.head_dim
         ).transpose(1, 2)
 
         attn_output = self.attention_block(

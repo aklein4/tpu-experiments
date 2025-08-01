@@ -130,6 +130,7 @@ class ZAttention(nn.Module):
             bsz, k_len, self.num_key_value_heads, self.head_dim
         ).transpose(1, 2)
 
+        print(query_states.shape, key_states.shape, self.num_key_value_groups, flush=True)
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 

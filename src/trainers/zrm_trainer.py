@@ -13,6 +13,10 @@ def kl_div(a, b):
     return (a - b).pow(2).sum(dim=-1) / 2
 
 
+def per_token(x, labels, pad_token_id):
+    return x.sum() / ((labels != pad_token_id).float().sum() + 1)
+
+
 def get_w_kl(kl):
     og_total = kl.sum()
 
@@ -21,10 +25,6 @@ def get_w_kl(kl):
 
     w = w * og_total / new_total
     return w.detach()
-
-
-def per_token(x, labels, pad_token_id):
-    return x.sum() / ((labels != pad_token_id).float().sum() + 1)
 
 
 def effective_parties(x):
@@ -37,12 +37,15 @@ def cosine_schedule(
     step,
     wait_steps,
     warmup_steps,
+    up=True
 ):
     t = torch.clip(
         (step.float() - wait_steps) / warmup_steps,
         0.0, 1.0
     )
-    return 0.5 * (1 - torch.cos(np.pi * t))
+    if up:
+        return 0.5 * (1 - torch.cos(np.pi * t))
+    return 0.5 * (1 + torch.cos(np.pi * t))
 
 
 class ZRMTrainer(BaseTrainer):
@@ -53,22 +56,22 @@ class ZRMTrainer(BaseTrainer):
         pad_token_id = self.model.config.pad_token_id
         labels = batch['output_ids']
 
-        if not hasattr(self, 'acc_step'):
-            self.acc_step = torch.zeros_like(labels.view(-1).long()).sum()
+        if not hasattr(self, 'threshold_step'):
+            self.threshold_step = torch.zeros_like(labels.view(-1).long()).sum()
         if not hasattr(self, 'activated'):
-            self.activated = torch.zeros_like(self.acc_step.bool()).any()
+            self.activated = torch.zeros_like(self.threshold_step.bool()).any()
 
-        gen_grad_scale = cosine_schedule(
-            self.acc_step, self.config.trainer.gen_grad_wait, self.config.trainer.gen_grad_warmup
-        )
+        alpha = cosine_schedule(
+            self.threshold_step, self.config.trainer.alpha_wait, self.config.trainer.alpha_warmup, up=False
+        ) * np.sqrt(2 * self.config.trainer.alpha_scale / self.model.z_size)
         noise_scale = cosine_schedule(
-            self.acc_step, self.config.trainer.noise_wait, self.config.trainer.noise_warmup
+            self.threshold_step, self.config.trainer.noise_wait, self.config.trainer.noise_warmup
         )
 
         out = self.model(
             input_ids=batch['input_ids'],
             output_ids=batch['output_ids'],
-            gen_grad_scale=gen_grad_scale,
+            alpha=alpha,
             noise_scale=noise_scale,
         )
 
@@ -83,97 +86,66 @@ class ZRMTrainer(BaseTrainer):
         self.activated = (
             self.activated | (lm_losses['acc'] >= self.config.trainer.acc_threshold).any()
         )
-        self.acc_step += self.activated.long().sum()
+        self.threshold_step += self.activated.long().sum()
         aux = {
             'lm_loss': lm_losses['loss'],
             'acc': lm_losses['acc'],
             'pcorr': lm_losses['pcorr'],
         
-            'alpha': out['alpha'],
+            'alpha': alpha,
+            'noise_scale': noise_scale,
             'z_scale': out['z_scale'],
 
-            'acc_step': self.acc_step,
+            'threshold_step': self.threshold_step,
             'activated': self.activated.long(),
-
-            'gen_grad_scale': gen_grad_scale,
-            'noise_scale': noise_scale,
 
             'frac_labelled': (labels != pad_token_id).float().mean(),
         }
 
-        # get basic KL stuff
-        kl = kl_div(
-            out['encoder_mu'],
-            out['generator_mu']
+        # true kl
+        kl_true = kl_div(
+            out['encoder_mu'], out['generator_mu']
         )
-        aux['kl_per_token'] = per_token(kl, labels, pad_token_id)
-        aux['elbo'] = aux['lm_loss'] + aux['kl_per_token']
-        aux['kl_parties'] = effective_parties(kl.mean(0))
-        w_kl = get_w_kl(kl)
-
-        # kl with respect to the encoder
-        aux['enc_kl_scale'] = cosine_schedule(
-            self.acc_step, self.config.trainer.enc_kl_wait, self.config.trainer.enc_kl_warmup
+        aux['true_kl_per_token'] = per_token(
+            kl_true, labels, pad_token_id
         )
-        kl_enc = kl_div(
-            out['alpha'].detach() * scale_gradient(out['encoder_mu_raw'], aux['enc_kl_scale']),
-            out['generator_mu'].detach()
-        ) * w_kl
-        aux["enc_kl_per_token"] = per_token(kl_enc, labels, pad_token_id)
+        aux['true_kl_parties'] = effective_parties(kl_true.mean(0))
+        aux['elbo'] = aux['lm_loss'] + aux['true_kl_per_token']
 
-        # kl with respect to the generator
-        kl_gen = kl_div(
-            out['encoder_mu'].detach(),
-            out['alpha'].detach() * out['generator_mu_raw']
+        # base kl
+        kl_base = kl_div(
+            out['encoder_mu_base'], out['generator_mu']
         )
-        aux["gen_kl_per_token"] = per_token(kl_gen, labels, pad_token_id)
-
-        # kl with respect to alpha
-        kl_alpha = kl_div(
-            out['alpha'] * out['encoder_mu_raw'].detach(),
-            out['alpha'] * out['generator_mu_raw'].detach()
+        w_kl = get_w_kl(kl_base)
+        aux['base_kl_per_token'] = per_token(
+            kl_base * w_kl, labels, pad_token_id
         )
-        aux["alpha_kl_per_token"] = per_token(kl_alpha, labels, pad_token_id)
-
-        # kl with respect to the mean of the encoder mu
-        kl_mean = kl_div(
-            out['encoder_mu'],
-            out['encoder_mu'].mean(dim=0, keepdim=True)
+        aux['base_kl_parties'] = effective_parties(kl_base.mean(0))
+        
+        # mean kls
+        kl_base_mean = kl_div(
+            out['encoder_mu_base'], out['encoder_mu_base'].mean(dim=0, keepdim=True)
         )
-        aux["mean_kl_per_token"] = per_token(kl_mean, labels, pad_token_id)
-        aux["mean_kl_parties"] = effective_parties(kl_mean.mean(0))
+        aux["mean_base_kl_per_token"] = per_token(kl_base_mean, labels, pad_token_id)
+        aux["mean_base_kl_parties"] = effective_parties(kl_base_mean.mean(0))
+        
+        kl_extra_mean = kl_div(
+            out['encoder_mu_extra'], out['encoder_mu_extra'].mean(dim=0, keepdim=True)
+        )
+        aux["mean_extra_kl_per_token"] = per_token(kl_extra_mean, labels, pad_token_id)
+        aux["mean_extra_kl_parties"] = effective_parties(kl_extra_mean.mean(0))
 
-        # uniformity loss
-        # aux['uniformity_weight_scaled'] = self.config.trainer.uniformity_weight * (
-        #     1 - np.clip(
-        #         self.step / self.config.trainer.enc_kl_start,
-        #         0.0, 1.0
-        #     )
-        # )
-        # mu_norm = out['encoder_mu_raw'] / out['encoder_mu_raw'].norm(dim=-1, keepdim=True)
-        # dists = torch.cdist(
-        #     mu_norm.permute(1, 0),
-        #     mu_norm.permute(1, 0),
-        #     p=2
-        # )
-        # dists = torch.masked_fill(
-        #     dists,
-        #     dists < 1e-5,
-        #     10.0
-        # )
-        # aux["uniformity_loss"] = torch.logsumexp(
-        #     -(dists ** 2) * self.config.trainer.uniformity_temp,
-        #     dim=-1
-        # ).mean()
+        kl_true_mean = kl_div(
+            out['encoder_mu'], out['encoder_mu'].mean(dim=0, keepdim=True)
+        )
+        aux["mean_true_kl_per_token"] = per_token(kl_true_mean, labels, pad_token_id)
+        aux["mean_true_kl_parties"] = effective_parties(kl_true_mean.mean(0))
 
         # the loss
-        kl_loss = (
-            self.config.trainer.kl_weight * aux["enc_kl_per_token"] +
-            self.config.trainer.kl_weight * aux["alpha_kl_per_token"] +
-            aux["gen_kl_per_token"]
-            # + aux['uniformity_weight_scaled'] * aux["uniformity_loss"]
+        loss = (
+            aux['lm_loss'] +
+            self.config.trainer.kl_weight * aux['base_kl_per_token']
         )
-        loss = aux['lm_loss'] + kl_loss
 
         # check for NaNs
         aux["nan_loss"] = (~torch.isfinite(loss)).any().float()

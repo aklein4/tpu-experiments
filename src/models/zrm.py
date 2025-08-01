@@ -167,7 +167,10 @@ class ZRMModel(nn.Module):
         self.encoder_noise_proj_in = nn.Linear(
             self.z_size, self.hidden_size, bias=False
         )
-        self.encoder_mu_proj_out = nn.Linear(
+        self.encoder_base_mu_proj_out = nn.Linear(
+            self.hidden_size, self.z_size, bias=False
+        )
+        self.encoder_extra_mu_proj_out = nn.Linear(
             self.hidden_size, self.z_size, bias=False
         )
 
@@ -183,16 +186,16 @@ class ZRMModel(nn.Module):
         )
 
         # bias to help with initialization
-        self.enc_mu_bias = nn.Parameter(
+        self.enc_mu_extra_bias = nn.Parameter(
             torch.zeros(self.z_length, self.z_size)
         )
-        self.enc_mu_std = nn.Parameter(
+        self.enc_mu_extra_std = nn.Parameter(
             torch.ones(self.z_length, self.z_size)
         )
         self.enc_mu_inited = False
 
-        # scaling components
-        self.log_alpha = nn.Parameter(torch.tensor([0.0] * 64) / self.lr_scaler)
+        # scales to help with mu scaling
+        self.mu_scale = np.sqrt(2 * np.log(self.vocab_size) / self.z_size)
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
@@ -214,21 +217,17 @@ class ZRMModel(nn.Module):
         self,
         input_ids: torch.LongTensor,
         output_ids: torch.LongTensor,
-        gen_grad_scale: float = 1.0,
-        dec_grad_scale: float = 1.0,
+        alpha: float = 0.0,
         noise_scale: float = 1.0,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         assert input_ids.shape[-1] == self.input_length
         assert output_ids.shape[-1] == self.output_length
 
-        # get the real alpha value
-        alpha = F.softplus(
-            self.log_alpha.mean() # * self.lr_scaler
-        ) / np.log(2.0)
-        alpha = alpha * np.sqrt(2 * self.config.z_info / self.z_size)
-        # alpha = np.sqrt(np.log(self.vocab_size) / self.z_size)
-
-        z_scale = 1 / torch.sqrt(alpha**2 + noise_scale**2)
+        z_scale = 1 / torch.sqrt(
+            noise_scale ** 2 +
+            alpha ** 2 +
+            self.mu_scale ** 2
+        )
 
         # get reusable components
         input_tokens = self.embed_tokens(input_ids) * self.lr_scaler
@@ -246,7 +245,7 @@ class ZRMModel(nn.Module):
         ) * noise_scale
 
         # run the encoder
-        encoder_mu_raw = self.encode(
+        encoder_mu_base, encoder_mu_extra = self.encode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             input_mask=input_mask,
@@ -258,36 +257,31 @@ class ZRMModel(nn.Module):
         if not self.enc_mu_inited:
             # this triggers a recompile after the first step
             # but it's fine because the second step recompiles anyway
-            print("Initializing encoder mu bias and std", flush=True)
             with torch.no_grad():
-                self.enc_mu_bias.add_(-encoder_mu_raw.mean(0).detach())
-                self.enc_mu_std.mul_(1 / encoder_mu_raw.std(0).detach())
+                self.enc_mu_extra_bias.add_(-encoder_mu_extra.mean(0).detach())
+                self.enc_mu_extra_std.mul_(1 / encoder_mu_extra.std(0).detach())
             self.enc_mu_inited = True
-        encoder_mu_raw = F.rms_norm(
-            (encoder_mu_raw + self.enc_mu_bias[None]) * self.enc_mu_std[None],
+        encoder_mu_extra = F.rms_norm(
+            (encoder_mu_extra + self.enc_mu_extra_bias[None]) * self.enc_mu_extra_std[None],
             [self.z_size],
             eps=self.config.rms_norm_eps
         )
-        encoder_mu = encoder_mu_raw * alpha
+        encoder_mu_base = encoder_mu_base * self.mu_scale
+        encoder_mu = (
+            encoder_mu_base +
+            alpha * encoder_mu_extra
+        )
 
         # run the generator
-        generator_z = scale_gradient(
-            encoder_mu,
-            gen_grad_scale,
-        ) + noise
-        generator_mu_raw = self.generate(
+        generator_mu = self.generate(
             input_tokens=input_tokens,
             input_mask=input_mask,
             input_bias=input_bias,
-            z=generator_z * z_scale,
+            z=(encoder_mu + noise) * z_scale
         )
-        generator_mu = generator_mu_raw * alpha
+        generator_mu = generator_mu * self.mu_scale
 
         # run the decoder   
-        decoder_z = scale_gradient(
-            encoder_mu,
-            dec_grad_scale,
-        ) + noise
         lm_logits = self.decode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -295,16 +289,15 @@ class ZRMModel(nn.Module):
             output_mask=output_mask,
             input_bias=input_bias,
             output_bias=output_bias,
-            z=decoder_z * z_scale,
+            z=(encoder_mu + noise) * z_scale
         )
 
         return {
             "lm_logits": lm_logits,
             "encoder_mu": encoder_mu,
             "generator_mu": generator_mu,
-            "encoder_mu_raw": encoder_mu_raw,
-            "generator_mu_raw": generator_mu_raw,
-            "alpha": alpha,
+            "encoder_mu_base": encoder_mu_base,
+            "encoder_mu_extra": encoder_mu_extra,
             "z_scale": z_scale,
         }
     
@@ -390,11 +383,14 @@ class ZRMModel(nn.Module):
         )
         
         # get the mu values
-        mu = self.encoder_mu_proj_out(
+        mu_base = self.encoder_base_mu_proj_out(
+            encoder_states[:, -self.z_length:]
+        )
+        mu_extra = self.encoder_extra_mu_proj_out(
             encoder_states[:, -self.z_length:]
         )
 
-        return mu
+        return mu_base, mu_extra
 
 
     def generate(

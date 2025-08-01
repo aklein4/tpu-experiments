@@ -215,7 +215,7 @@ class ZState(nn.Module):
         z_weights = torch.softmax(self.z_state_weights * np.sqrt(self.config.hidden_size), dim=0)[None]
         z_values = (self.z_to_state(z) * z_weights).sum(dim=1)
         z_values = z_values.view(
-            z.shape[0], self.num_z_k, self.hidden_size // self.config.num_attention_heads
+            z.shape[0], self.num_z_k, self.config.hidden_size // self.config.num_attention_heads
         ) 
 
         return z_values

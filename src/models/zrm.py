@@ -130,13 +130,11 @@ class ZAttention(nn.Module):
             bsz, k_len, self.num_key_value_heads, self.head_dim
         ).transpose(1, 2)
 
-        print(query_states.shape, key_states.shape, self.num_key_value_groups, flush=True)
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
-        print(key_states.shape, flush=True)
 
         attn_output = self.attention_block(
-            query_states, key_states, value_states
+            query_states, key_states, value_states, repeat=False
         )
         attn_output = attn_output.transpose(1, 2).contiguous()
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)

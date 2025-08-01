@@ -147,8 +147,13 @@ class ZRMDecoderLayer(nn.Module):
     def __init__(self, base_layer: nn.Module, config):
         super().__init__()
 
-        self.base_layer = base_layer
-        self.base_layer.no_remat = True
+        self.hidden_size = base_layer.hidden_size
+
+        self.self_attn = base_layer.self_attn
+
+        self.mlp = base_layer.mlp
+        self.input_layernorm = base_layer.input_layernorm
+        self.post_attention_layernorm = base_layer.post_attention_layernorm
 
         # replace the attention block with ZAttention
         self.z_norm = LlamaRMSNorm(
@@ -167,14 +172,26 @@ class ZRMDecoderLayer(nn.Module):
         elementwise_attention_bias: torch.Tensor | None = None,
         extra_kwargs: dict | None = None,
     ):
-        hidden_states = self.base_layer(
-            hidden_states,
+        
+        residual = hidden_states
+
+        hidden_states = self.input_layernorm(hidden_states)
+
+        # Self Attention
+        hidden_states = self.self_attn(
+            hidden_states=hidden_states,
             attention_mask=attention_mask,
             position_ids=position_ids,
             position_embeddings=position_embeddings,
             elementwise_attention_bias=elementwise_attention_bias,
-            extra_kwargs=extra_kwargs,
         )
+        hidden_states = residual + hidden_states
+
+        # Fully Connected
+        residual = hidden_states
+        hidden_states = self.post_attention_layernorm(hidden_states)
+        hidden_states = self.mlp(hidden_states)
+        hidden_states = residual + hidden_states
 
         y = self.z_attn(
             self.z_norm(hidden_states),

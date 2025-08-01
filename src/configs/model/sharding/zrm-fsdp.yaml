@@ -2,15 +2,15 @@
 embed_tokens.weight: [fsdp, null]
 lm_head.weight: [fsdp, null]
 
-decoder.layers.*.base_layer.self_attn.o_proj.weight: [fsdp, null]
-decoder.layers.*.base_layer.mlp.down_proj.weight: [null, fsdp]
+decoder.layers.*.self_attn.o_proj.weight: [fsdp, null]
+decoder.layers.*.mlp.down_proj.weight: [null, fsdp]
 
-decoder.layers.*.base_layer.input_layernorm.weight: [fsdp]
-decoder.layers.*.base_layer.post_attention_layernorm.weight: [fsdp]
+decoder.layers.*.input_layernorm.weight: [fsdp]
+decoder.layers.*.post_attention_layernorm.weight: [fsdp]
 decoder.norm.weight: [fsdp]
 
-decoder.layers.*.base_layer.self_attn.qkv_proj.weight: [fsdp, null]
-decoder.layers.*.base_layer.mlp.gate_up_proj.weight: [fsdp, null]
+decoder.layers.*.self_attn.qkv_proj.weight: [fsdp, null]
+decoder.layers.*.mlp.gate_up_proj.weight: [fsdp, null]
 
 decoder.layers.*.z_norm.weight: [fsdp]
 decoder.layers.*.z_attn.q_proj.weight: [fsdp, null]

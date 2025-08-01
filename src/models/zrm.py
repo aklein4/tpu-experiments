@@ -108,7 +108,7 @@ class LoRaConditioner(nn.Module):
 
         inner = (
             self.lora_down(x) * 
-            self.condition_in(self.condition)
+            self.condition_in(self.condition)[..., None, :]
         )
         outer = self.lora_up(inner)
 

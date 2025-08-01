@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 import numpy as np
 
-from torchprime.torch_xla_models.attention import AttentionModule
+from torchprime.torch_xla_models.attention import AttentionModule, repeat_kv
 from torchprime.torch_xla_models.scan_layers import HomogeneousSequential
 
 from models.llama import LlamaModel, LlamaRMSNorm
@@ -129,6 +129,9 @@ class ZAttention(nn.Module):
         value_states = value_states.view(
             bsz, k_len, self.num_key_value_heads, self.head_dim
         ).transpose(1, 2)
+
+        key_states = repeat_kv(key_states, self.num_key_value_groups)
+        value_states = repeat_kv(value_states, self.num_key_value_groups)
 
         attn_output = self.attention_block(
             query_states, key_states, value_states

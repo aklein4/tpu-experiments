@@ -32,6 +32,9 @@ PROCESS_COUNT = lambda: xr.process_count()
 # local data path
 LOCAL_DATA_PATH = os.path.join(BASE_PATH, "local_data")
 
+# paths to checkpoints
+CHECKPOINTS_PATH = os.path.join(LOCAL_DATA_PATH, "checkpoints")
+
 # paths to config files
 CONFIG_PATH = os.path.join(BASE_PATH, "configs")
 

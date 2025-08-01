@@ -21,8 +21,11 @@ import huggingface_hub
 import safetensors
 import torch
 import torch.distributed.checkpoint as dist_cp
-import torch_xla.experimental.distributed_checkpoint as xc
 from transformers import AutoTokenizer
+
+from utils import constants
+if constants.XLA_AVAILABLE:
+  import torch_xla.experimental.distributed_checkpoint as xc
 
 logger = logging.getLogger(__name__)
 

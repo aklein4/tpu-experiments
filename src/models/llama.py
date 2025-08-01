@@ -19,7 +19,6 @@
 """PyTorch LLaMA model."""
 
 import torch
-import torch_xla.debug.profiler as xp
 from omegaconf import DictConfig
 from torch import nn
 from transformers.activations import ACT2FN
@@ -28,9 +27,13 @@ import math
 
 from torchprime.layers.sequential import HomogeneousSequential
 from torchprime.rope.rope import RopeScaling, llama3_rope_frequencies
-from torchprime.torch_xla_models import offloading
 from torchprime.torch_xla_models.attention import AttentionModule
 from torchprime.torch_xla_models.loss import cross_entropy_loss
+
+from utils import constants
+if constants.XLA_AVAILABLE:
+    import torch_xla.debug.profiler as xp
+    from torchprime.torch_xla_models import offloading
 
 
 logger = logging.get_logger(__name__)
@@ -138,7 +141,7 @@ class LlamaMLP(nn.Module):
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
-    @xp.trace_me("LlamaMLP")
+    # @xp.trace_me("LlamaMLP")
     def forward(self, x):
         gate_up = self.gate_up_proj(x)
         gate, up = torch.split(gate_up, self.splits, dim=-1)
@@ -205,7 +208,7 @@ class LlamaAttention(nn.Module):
             self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias
         )
 
-    @xp.trace_me("LlamaAttention")
+    # @xp.trace_me("LlamaAttention")
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -269,7 +272,7 @@ class LlamaDecoderLayer(nn.Module):
             config.hidden_size, eps=config.rms_norm_eps
         )
 
-    @xp.trace_me("LlamaDecoderLayer")
+    # @xp.trace_me("LlamaDecoderLayer")
     def forward(
         self,
         hidden_states: torch.Tensor,
@@ -289,7 +292,8 @@ class LlamaDecoderLayer(nn.Module):
         # to offload this tensor to host RAM to save memory. This is not a standard
         # torch API because there is no such feature in PyTorch. Instead, the name
         # becomes node metadata during FX graph capture.
-        hidden_states = offloading.offload_name(hidden_states, "decoder_input")
+        if constants.XLA_AVAILABLE:
+            hidden_states = offloading.offload_name(hidden_states, "decoder_input")
 
         residual = hidden_states
 
@@ -347,7 +351,7 @@ class LlamaModel(nn.Module):
         )
 
 
-    @xp.trace_me("LlamaModel")
+    # @xp.trace_me("LlamaModel")
     def forward(
         self,
         input_ids: torch.LongTensor | None = None,
@@ -430,7 +434,7 @@ class LlamaForCausalLM(nn.Module):
             module.weight.data.normal_(mean=0.0, std=1/self.lr_scaler)
 
 
-    @xp.trace_me("LlamaForCausalLM")
+    # @xp.trace_me("LlamaForCausalLM")
     def forward(
         self,
         input_ids: torch.LongTensor,

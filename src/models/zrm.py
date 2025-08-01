@@ -193,11 +193,11 @@ class ZRMDecoderLayer(nn.Module):
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
-        y = self.z_attn(
-            self.z_norm(hidden_states),
-            value_states=extra_kwargs['value_states']
-        )
-        hidden_states = hidden_states + y
+        # y = self.z_attn(
+        #     self.z_norm(hidden_states),
+        #     value_states=extra_kwargs['value_states']
+        # )
+        # hidden_states = hidden_states + y
 
         return hidden_states
 
@@ -228,6 +228,7 @@ class ZState(nn.Module):
         self,
         z: torch.FloatTensor,
     ):
+        return z
 
         z_weights = torch.softmax(self.z_state_weights * np.sqrt(self.config.hidden_size), dim=0)[None]
         z_values = (self.z_to_state(z) * z_weights).sum(dim=1)

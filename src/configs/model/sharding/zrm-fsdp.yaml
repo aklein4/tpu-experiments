@@ -56,7 +56,6 @@ generator_input_emb: [null, fsdp]
 generator_z_tokens: [null, fsdp]
 
 decoder_input_emb: [null, fsdp]
-decoder_z_tokens: [null, fsdp]
 decoder_start_output_token: [fsdp]
 decoder_output_emb: [null, fsdp]
 
@@ -66,8 +65,6 @@ encoder_extra_mu_proj_out.weight: [null, fsdp]
 
 generator_z_proj_in.weight: [fsdp, null]
 generator_mu_proj_out.weight: [null, fsdp]
-
-decoder_z_proj_in.weight: [fsdp, null]
 
 enc_mu_extra_bias: [fsdp, null]
 enc_mu_extra_std: [fsdp, null]

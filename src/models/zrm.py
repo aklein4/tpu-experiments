@@ -246,7 +246,7 @@ class ZRMModel(nn.Module):
             transformer.embed_tokens = None
 
         self.decoder.layers = HomogeneousSequential(
-            [
+            *[
                 ZRMDecoderLayer(base_layer, config)
                 for base_layer in self.decoder.layers
             ]

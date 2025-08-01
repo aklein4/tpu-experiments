@@ -103,7 +103,7 @@ class ZRMTrainer(BaseTrainer):
             batch['input_ids'],
             ignore_index=pad_token_id,
             shift_labels=True,
-            shift_logits=True
+            shift_logits=False
         )
         aux['input_lm_loss'] = input_losses['loss']
         aux['input_acc'] = input_losses['acc']

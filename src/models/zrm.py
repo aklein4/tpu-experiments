@@ -133,6 +133,7 @@ class ZAttention(nn.Module):
         print(query_states.shape, key_states.shape, self.num_key_value_groups, flush=True)
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
+        print(key_states.shape, flush=True)
 
         attn_output = self.attention_block(
             query_states, key_states, value_states

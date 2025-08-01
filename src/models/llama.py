@@ -280,6 +280,7 @@ class LlamaDecoderLayer(nn.Module):
         position_ids: torch.Tensor | None = None,
         position_embeddings: tuple[torch.Tensor, torch.Tensor] | None = None,    # necessary, but kept here for BC
         elementwise_attention_bias: torch.Tensor | None = None,
+        extra_kwargs: dict | None = None,
     ) -> torch.Tensor:
         """
         Args:
@@ -359,6 +360,7 @@ class LlamaModel(nn.Module):
         attention_mask: torch.FloatTensor | None = None,
         position_ids: torch.LongTensor | None = None,
         elementwise_attention_bias: torch.LongTensor | None = None,
+        extra_kwargs: dict | None = None,
     ) -> torch.Tensor:
         assert (input_ids is not None) ^ (inputs_embeds is not None), (
             "You have to specify either input_ids or inputs_embeds, but not both."
@@ -401,6 +403,7 @@ class LlamaModel(nn.Module):
             position_ids=position_ids,
             position_embeddings=position_embeddings,
             elementwise_attention_bias=elementwise_attention_bias,
+            extra_kwargs=extra_kwargs,
         )
 
         hidden_states = self.norm(hidden_states)

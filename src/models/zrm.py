@@ -4,7 +4,9 @@ import torch.nn.functional as F
 
 import numpy as np
 
-from models.llama import LlamaModel
+from torchprime.torch_xla_models.attention import AttentionModule
+
+from models.llama import LlamaModel, LlamaRMSNorm
 from utils.torch_utils import (
     scale_gradient,
     expand_to_batch,
@@ -71,6 +73,112 @@ class LoRaModulator(nn.Module):
         )
 
 
+class ZAttention(nn.Module):
+    """Multi-headed attention from 'Attention Is All You Need' paper"""
+
+    def __init__(self, config):
+        super().__init__()
+        self.config = config
+        self.attention_block = AttentionModule(config, causal=False, attention_kernel="other")
+
+        self.hidden_size = config.hidden_size
+        self.num_heads = config.num_attention_heads
+        self.head_dim = self.hidden_size // self.num_heads
+        self.num_z_k = config.num_z_k
+        self.num_key_value_heads = 1
+        self.num_key_value_groups = self.num_heads // self.num_key_value_heads
+
+        if (self.head_dim * self.num_heads) != self.hidden_size:
+            raise ValueError(
+                f"hidden_size must be divisible by num_heads (got `hidden_size`: {self.hidden_size}"
+                f" and `num_heads`: {self.num_heads})."
+            )
+
+        self.q_proj = nn.Linear(
+            self.hidden_size,
+            self.num_heads * self.head_dim,
+            bias=config.attention_bias,
+        )
+        self.k = nn.Parameter(
+            torch.randn(self.num_z_k, self.head_dim) / np.sqrt(self.hidden_size)
+        )
+        self.o_proj = nn.Linear(
+            self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias
+        )
+
+
+    # @xp.trace_me("LlamaAttention")
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        value_states: torch.Tensor,
+    ) -> torch.FloatTensor:
+        bsz, q_len, _ = hidden_states.shape
+
+        query_states = self.q_proj(hidden_states)
+        key_states = self.k[None] * np.sqrt(self.head_dim)
+
+        query_states = query_states.view(
+            bsz, q_len, self.num_heads, self.head_dim
+        ).transpose(1, 2)
+        key_states = key_states.view(
+            bsz, q_len, self.num_key_value_heads, self.head_dim
+        ).transpose(1, 2)
+        value_states = value_states.view(
+            bsz, q_len, self.num_key_value_heads, self.head_dim
+        ).transpose(1, 2)
+
+        attn_output = self.attention_block(
+            query_states, key_states, value_states
+        )
+        attn_output = attn_output.transpose(1, 2).contiguous()
+        attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
+        attn_output = self.o_proj(attn_output)
+        return attn_output
+
+
+class ZRMDecoderLayer(nn.Module):
+
+    def __init__(self, base_layer: nn.Module, config):
+        super().__init__()
+
+        self.base_layer = base_layer
+
+        # replace the attention block with ZAttention
+        self.z_norm = LlamaRMSNorm(
+            config.hidden_size,
+            eps=config.rms_norm_eps
+        )
+        self.z_attn = ZAttention(config)
+
+
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        attention_mask: torch.Tensor | None = None,
+        position_ids: torch.Tensor | None = None,
+        position_embeddings: tuple[torch.Tensor, torch.Tensor] | None = None,    # necessary, but kept here for BC
+        elementwise_attention_bias: torch.Tensor | None = None,
+        extra_kwargs: dict | None = None,
+    ):
+        hidden_states = self.base_layer(
+            hidden_states,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            position_embeddings=position_embeddings,
+            elementwise_attention_bias=elementwise_attention_bias,
+            extra_kwargs=extra_kwargs,
+        )
+
+        y = self.z_attn(
+            self.z_norm(hidden_states),
+            value_states=extra_kwargs['value_states']
+        )
+        hidden_states = hidden_states + y
+
+        return hidden_states
+
+
 class ZRMModel(nn.Module):
     def __init__(self, config):
         super().__init__()
@@ -88,6 +196,21 @@ class ZRMModel(nn.Module):
         self.output_length = config.output_length
         self.z_length = config.z_length
         
+        # z state config
+        self.num_z_k = config.num_z_k
+        self.total_z_state = (
+            self.num_z_k * 
+            (self.hidden_size // config.num_attention_heads)
+        )
+        self.z_to_state = nn.Linear(
+            self.z_size,
+            self.total_z_state,
+            bias=False
+        )
+        self.z_state_weights = nn.Parameter(
+            torch.randn(self.z_length, self.total_z_state) / self.lr_scaler
+        )
+
         # transformers
         self.encoder = LlamaModel(config)
         self.generator = LlamaModel(config)
@@ -103,10 +226,6 @@ class ZRMModel(nn.Module):
                 self.generator,
                 [self.input_length, self.z_length]
             ),
-            (
-                self.decoder,
-                [self.input_length, self.z_length, self.output_length]
-            )
         ]
         for transformer, splits in transformer_splits:
             transformer: LlamaModel
@@ -124,6 +243,14 @@ class ZRMModel(nn.Module):
                 )
             
             transformer.embed_tokens = None
+
+        self.decoder.layers = nn.ModuleList(
+            [
+                ZRMDecoderLayer(base_layer, config)
+                for base_layer in self.decoder.layers
+            ]
+        )
+        self.decoder.embed_tokens = None
         
         # LM components
         self.embed_tokens = nn.Embedding(self.vocab_size, self.hidden_size)
@@ -153,9 +280,6 @@ class ZRMModel(nn.Module):
         self.decoder_input_emb = nn.Parameter(
             torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
-        self.decoder_z_tokens = nn.Parameter(
-            torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
-        )
         self.decoder_start_output_token = nn.Parameter(
             torch.randn(self.hidden_size) / self.lr_scaler
         )
@@ -179,10 +303,6 @@ class ZRMModel(nn.Module):
         )
         self.generator_mu_proj_out = nn.Linear(
             self.hidden_size, self.z_size, bias=False
-        )
-
-        self.decoder_z_proj_in = nn.Linear(
-            self.z_size, self.hidden_size, bias=False
         )
 
         # bias to help with initialization
@@ -282,7 +402,7 @@ class ZRMModel(nn.Module):
         generator_mu = generator_mu * self.mu_scale
 
         # run the decoder   
-        lm_logits = self.decode(
+        input_logits, output_logits = self.decode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             input_mask=input_mask,
@@ -293,7 +413,8 @@ class ZRMModel(nn.Module):
         )
 
         return {
-            "lm_logits": lm_logits,
+            "input_logits": input_logits,
+            "output_logits": output_logits,
             "encoder_mu": encoder_mu,
             "generator_mu": generator_mu,
             "encoder_mu_base": encoder_mu_base,
@@ -464,16 +585,17 @@ class ZRMModel(nn.Module):
         output_bias: torch.FloatTensor,
         z: torch.FloatTensor,
     ):
-        
+
+        # construct the z state
+        z_weights = torch.softmax(self.z_state_weights * self.lr_scaler, dim=0)[None]
+        z_values = self.z_to_state(z).view(
+            z.shape[0], self.num_z_k, self.hidden_size // self.num_key_value_heads
+        ) * z_weights
+
         # construct the decoder input
         input_states = (
             unsqueeze_to_batch(self.decoder_input_emb, input_tokens) * self.lr_scaler +
             input_tokens
-        )
-
-        z_states = (
-            unsqueeze_to_batch(self.decoder_z_tokens, input_tokens) * self.lr_scaler +
-            self.decoder_z_proj_in(z)
         )
 
         output_states = (
@@ -487,7 +609,6 @@ class ZRMModel(nn.Module):
         decoder_states = torch.cat(
             [
                 input_states,
-                z_states,
                 output_states,
             ],
             dim=-2
@@ -497,7 +618,6 @@ class ZRMModel(nn.Module):
         position_mask = torch.cat(
             [
                 input_mask,
-                torch.ones_like(z_states[..., 0]),
                 torch.cat(
                     [
                         torch.ones_like(output_mask[..., :1]),
@@ -514,7 +634,6 @@ class ZRMModel(nn.Module):
         attention_bias = torch.cat(
             [
                 input_bias,
-                torch.zeros_like(z_states[..., 0]),
                 torch.cat(
                     [
                         torch.zeros_like(output_bias[..., :1]),
@@ -530,11 +649,15 @@ class ZRMModel(nn.Module):
         decoder_states = self.decoder(
             inputs_embeds=decoder_states,
             position_ids=position_ids,
-            elementwise_attention_bias=attention_bias
+            elementwise_attention_bias=attention_bias,
+            extra_kwargs={
+                "value_states": z_values,
+            }
         )
         
         # get the lm head logits
-        lm_logits = self.lm_head(decoder_states[:, -self.output_length:])
+        input_logits = self.lm_head(decoder_states[:, :self.input_length])
+        output_logits = self.lm_head(decoder_states[:, -self.ouput_length:])
 
-        return lm_logits
+        return input_logits, output_logits
     

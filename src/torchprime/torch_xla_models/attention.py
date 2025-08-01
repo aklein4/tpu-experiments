@@ -32,12 +32,15 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
 
 
 class AttentionModule(nn.Module):
-  def __init__(self, config, kernel_config: dict[str, Any] | None = None):
+  def __init__(self, config, kernel_config: dict[str, Any] | None = None, causal=True, attention_kernel=None):
     super().__init__()
     self.config = config
     self.kernel_config = kernel_config
+    self.causal = causal
+    self.attention_kernel = attention_kernel if attention_kernel is not None else config.attention_kernel
 
-  @xp.trace_me("AttentionModule")
+
+  # @xp.trace_me("AttentionModule")
   def forward(
     self,
     query_states: torch.Tensor,  # (batch_size, num_heads, q_len, head_dim)
@@ -45,7 +48,7 @@ class AttentionModule(nn.Module):
     value_states: torch.Tensor,  # (batch_size, num_kv_heads, kv_len, head_dim)
     attention_mask: torch.Tensor | None = None,
   ):
-    if self.config.attention_kernel != "splash_attention":
+    if self.attention_kernel != "splash_attention":
       num_key_value_groups = (
         self.config.num_attention_heads // self.config.num_key_value_heads
       )
@@ -68,7 +71,7 @@ class AttentionModule(nn.Module):
       self.partition_spec = (("data", "fsdp"), "tensor", None, None)
       segment_ids_partition_spec = (("data", "fsdp"), None)
 
-    match self.config.attention_kernel:
+    match self.attention_kernel:
       case "splash_attention":
         assert constants.XLA_AVAILABLE, "Splash Attention requires XLA"
         # Integrated with PyTorch/XLA Pallas Splash Attention:
@@ -162,7 +165,7 @@ class AttentionModule(nn.Module):
           query_states,
           key_states,
           value_states,
-          causal=True,
+          causal=self.causal,
           partition_spec=self.partition_spec,
         )
         attn_output = attn_output[:, :, :og_len, :]

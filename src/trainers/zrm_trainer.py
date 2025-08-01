@@ -64,20 +64,16 @@ class ZRMTrainer(BaseTrainer):
         alpha = cosine_schedule(
             self.threshold_step, self.config.trainer.alpha_wait, self.config.trainer.alpha_warmup, up=False
         ) * np.sqrt(2 * self.config.trainer.alpha_scale / self.model.z_size)
-        noise_scale = cosine_schedule(
-            self.threshold_step, self.config.trainer.noise_wait, self.config.trainer.noise_warmup
-        )
 
         out = self.model(
             input_ids=batch['input_ids'],
             output_ids=batch['output_ids'],
             alpha=alpha,
-            noise_scale=noise_scale,
         )
 
         # handle LM
         lm_losses = loss_utils.fast_lm_loss(
-            out['lm_logits'],
+            out['output_logits'],
             labels,
             ignore_index=pad_token_id,
             shift_labels=False,
@@ -93,7 +89,6 @@ class ZRMTrainer(BaseTrainer):
             'pcorr': lm_losses['pcorr'],
         
             'alpha': alpha,
-            'noise_scale': noise_scale,
             'z_scale': out['z_scale'],
 
             'threshold_step': self.threshold_step,
@@ -101,6 +96,18 @@ class ZRMTrainer(BaseTrainer):
 
             'frac_labelled': (labels != pad_token_id).float().mean(),
         }
+
+        # handle input lm
+        input_losses = loss_utils.fast_lm_loss(
+            out['input_logits'],
+            batch['input_ids'],
+            ignore_index=pad_token_id,
+            shift_labels=True,
+            shift_logits=True
+        )
+        aux['input_lm_loss'] = input_losses['loss']
+        aux['input_acc'] = input_losses['acc']
+        aux['input_pcorr'] = input_losses['pcorr']
 
         # true kl
         kl_true = kl_div(
@@ -130,7 +137,8 @@ class ZRMTrainer(BaseTrainer):
         aux["mean_base_kl_parties"] = effective_parties(kl_base_mean.mean(0))
         
         kl_extra_mean = kl_div(
-            out['encoder_mu_extra'], out['encoder_mu_extra'].mean(dim=0, keepdim=True)
+            out['encoder_mu_extra'] * alpha,
+            out['encoder_mu_extra'].mean(dim=0, keepdim=True) * alpha
         )
         aux["mean_extra_kl_per_token"] = per_token(kl_extra_mean, labels, pad_token_id)
         aux["mean_extra_kl_parties"] = effective_parties(kl_extra_mean.mean(0))

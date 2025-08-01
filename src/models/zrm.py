@@ -170,7 +170,7 @@ class ZRMDecoderLayer(nn.Module):
         position_ids: torch.Tensor | None = None,
         position_embeddings: tuple[torch.Tensor, torch.Tensor] | None = None,    # necessary, but kept here for BC
         elementwise_attention_bias: torch.Tensor | None = None,
-        extra_kwargs: dict | None = None,
+        **extra_kwargs,
     ):
         
         residual = hidden_states

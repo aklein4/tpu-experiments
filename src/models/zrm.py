@@ -693,7 +693,7 @@ class ZRMModel(nn.Module):
             inputs_embeds=decoder_states,
             position_ids=position_ids,
             elementwise_attention_bias=attention_bias,
-            extra_kwargs={
+            **{
                 "value_states": z_values,
             }
         )

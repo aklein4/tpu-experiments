@@ -64,15 +64,15 @@ class ZRMTrainer(BaseTrainer):
         alpha = cosine_schedule(
             self.threshold_step, self.config.trainer.alpha_wait, self.config.trainer.alpha_warmup, up=False
         ) * np.sqrt(2 * self.config.trainer.alpha_scale / self.model.z_size)
-        noise_scale = cosine_schedule(
-            self.threshold_step, self.config.trainer.noise_wait, self.config.trainer.noise_warmup, up=True
+        gen_grad_scale = cosine_schedule(
+            self.threshold_step, self.config.trainer.gen_grad_wait, self.config.trainer.gen_grad_warmup, up=True
         )
 
         out = self.model(
             input_ids=batch['input_ids'],
             output_ids=batch['output_ids'],
             alpha=alpha,
-            noise_scale=noise_scale,
+            gen_grad_scale=gen_grad_scale,
         )
 
         # handle LM
@@ -93,7 +93,7 @@ class ZRMTrainer(BaseTrainer):
             'pcorr': lm_losses['pcorr'],
         
             'alpha': alpha,
-            'noise_scale': noise_scale,
+            'noise_scale': gen_grad_scale,
             'z_scale': out['z_scale'],
 
             'threshold_step': self.threshold_step,
@@ -124,7 +124,8 @@ class ZRMTrainer(BaseTrainer):
 
         # base kl
         kl_base = kl_div(
-            out['encoder_mu_base'], out['generator_mu']
+            scale_gradient(out['encoder_mu_base'], gen_grad_scale),
+            out['generator_mu']
         )
         w_kl = get_w_kl(kl_base)
         aux['base_kl_per_token'] = per_token(

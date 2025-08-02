@@ -345,7 +345,7 @@ class ZRMModel(nn.Module):
         self.enc_mu_inited = False
 
         # scales to help with mu scaling
-        self.mu_scale = np.sqrt(2 * np.log(self.vocab_size) / self.z_size)
+        self.mu_scale = 1.0 # np.sqrt(2 * np.log(self.vocab_size) / self.z_size)
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
@@ -369,6 +369,7 @@ class ZRMModel(nn.Module):
         output_ids: torch.LongTensor,
         alpha: float = 0.0,
         noise_scale: float = 1.0,
+        gen_grad_scale: float = 1.0,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         assert input_ids.shape[-1] == self.input_length
         assert output_ids.shape[-1] == self.output_length
@@ -426,11 +427,14 @@ class ZRMModel(nn.Module):
         )
 
         # run the generator
+        enc_mu_for_generator = scale_gradient(
+            encoder_mu, gen_grad_scale
+        )
         generator_mu = self.generate(
             input_tokens=input_tokens,
             input_mask=input_mask,
             input_bias=input_bias,
-            z=(encoder_mu + noise) * z_scale
+            z=(enc_mu_for_generator + noise) * z_scale
         )
         generator_mu = generator_mu * self.mu_scale
 

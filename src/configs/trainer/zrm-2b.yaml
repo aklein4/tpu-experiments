@@ -39,10 +39,10 @@ max_grad_value: null
 
 alpha_scale: 4.0
 
-noise_wait: 0
-noise_warmup: 2000
+gen_grad_wait: 0
+gen_grad_warmup: 2000
 
-alpha_wait: 2500
+alpha_wait: 2000
 alpha_warmup: 10000
 
 acc_threshold: 0.75

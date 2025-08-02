@@ -552,7 +552,7 @@ class ZRMModel(nn.Module):
         z: torch.FloatTensor,
     ):
         z = F.rms_norm(
-            z, self.z_size,
+            z, [self.z_size],
             eps=self.config.rms_norm_eps
         )
 
@@ -620,7 +620,7 @@ class ZRMModel(nn.Module):
         z: torch.FloatTensor,
     ):
         z = F.rms_norm(
-            z, self.z_size,
+            z, [self.z_size],
             eps=self.config.rms_norm_eps
         )
 

@@ -162,5 +162,11 @@ class ZRMTrainer(BaseTrainer):
         # check for NaNs
         aux["nan_loss"] = (~torch.isfinite(loss)).any().float()
 
+        # count the number of tokens
+        aux["atom_count"] = (
+            (batch['input_ids'] != pad_token_id).long().sum() +
+            (batch['output_ids'] != pad_token_id).long().sum()
+        )
+
         return loss, aux
     

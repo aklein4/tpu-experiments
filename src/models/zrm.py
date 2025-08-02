@@ -296,7 +296,7 @@ class ZRMModel(nn.Module):
         )
 
         return {
-            "lm_logits": input_logits,
+            "input_logits": input_logits,
             "output_logits": output_logits,
             "encoder_mu": encoder_mu,
             "generator_mu": generator_mu,

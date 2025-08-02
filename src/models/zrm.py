@@ -374,12 +374,6 @@ class ZRMModel(nn.Module):
         assert input_ids.shape[-1] == self.input_length
         assert output_ids.shape[-1] == self.output_length
 
-        z_scale = 1 / torch.sqrt(
-            noise_scale ** 2 +
-            alpha ** 2 +
-            self.mu_scale ** 2
-        )
-
         # get reusable components
         input_tokens = self.embed_tokens(input_ids) * self.lr_scaler
         output_tokens = self.embed_tokens(output_ids) * self.lr_scaler
@@ -434,7 +428,7 @@ class ZRMModel(nn.Module):
             input_tokens=input_tokens,
             input_mask=input_mask,
             input_bias=input_bias,
-            z=(enc_mu_for_generator + noise) * z_scale
+            z=(enc_mu_for_generator + noise)
         )
         generator_mu = generator_mu * self.mu_scale
 
@@ -446,7 +440,7 @@ class ZRMModel(nn.Module):
             output_mask=output_mask,
             input_bias=input_bias,
             output_bias=output_bias,
-            z=(encoder_mu + noise) * z_scale
+            z=(encoder_mu + noise)
         )
 
         return {
@@ -456,7 +450,6 @@ class ZRMModel(nn.Module):
             "generator_mu": generator_mu,
             "encoder_mu_base": encoder_mu_base,
             "encoder_mu_extra": encoder_mu_extra,
-            "z_scale": z_scale,
         }
     
 
@@ -558,6 +551,10 @@ class ZRMModel(nn.Module):
         input_bias: torch.FloatTensor,
         z: torch.FloatTensor,
     ):
+        z = F.rms_norm(
+            z, self.z_size,
+            eps=self.config.rms_norm_eps
+        )
 
         # construct the generator input
         input_states = (
@@ -622,6 +619,10 @@ class ZRMModel(nn.Module):
         output_bias: torch.FloatTensor,
         z: torch.FloatTensor,
     ):
+        z = F.rms_norm(
+            z, self.z_size,
+            eps=self.config.rms_norm_eps
+        )
 
         # construct the decoder input
         input_states = (

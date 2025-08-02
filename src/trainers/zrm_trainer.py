@@ -94,7 +94,6 @@ class ZRMTrainer(BaseTrainer):
         
             'alpha': alpha,
             'noise_scale': gen_grad_scale,
-            'z_scale': out['z_scale'],
 
             'threshold_step': self.threshold_step,
             'activated': self.activated.long(),

@@ -77,7 +77,7 @@ class ZRMTrainer(BaseTrainer):
 
         # handle LM
         lm_losses = loss_utils.fast_lm_loss(
-            out['lm_logits'],
+            out['output_logits'],
             labels,
             ignore_index=pad_token_id,
             shift_labels=False,
@@ -98,9 +98,19 @@ class ZRMTrainer(BaseTrainer):
 
             'threshold_step': self.threshold_step,
             'activated': self.activated.long(),
-
-            'frac_labelled': (labels != pad_token_id).float().mean(),
         }
+
+        # handle input logits
+        input_losses = loss_utils.fast_lm_loss(
+            out['input_logits'],
+            batch['input_ids'],
+            ignore_index=pad_token_id,
+            shift_labels=True,
+            shift_logits=False
+        )
+        aux['input_lm_loss'] = input_losses['loss']
+        aux['input_acc'] = input_losses['acc']
+        aux['input_pcorr'] = input_losses['pcorr']
 
         # true kl
         kl_true = kl_div(
@@ -114,7 +124,8 @@ class ZRMTrainer(BaseTrainer):
 
         # base kl
         kl_base = kl_div(
-            out['encoder_mu_base'], out['generator_mu']
+            scale_gradient(out['encoder_mu_base'], self.config.trainer.kl_weight),
+            out['generator_mu']
         )
         w_kl = get_w_kl(kl_base)
         aux['base_kl_per_token'] = per_token(
@@ -130,7 +141,8 @@ class ZRMTrainer(BaseTrainer):
         aux["mean_base_kl_parties"] = effective_parties(kl_base_mean.mean(0))
         
         kl_extra_mean = kl_div(
-            out['encoder_mu_extra'], out['encoder_mu_extra'].mean(dim=0, keepdim=True)
+            out['encoder_mu_extra'] * alpha,
+            out['encoder_mu_extra'].mean(dim=0, keepdim=True) * alpha
         )
         aux["mean_extra_kl_per_token"] = per_token(kl_extra_mean, labels, pad_token_id)
         aux["mean_extra_kl_parties"] = effective_parties(kl_extra_mean.mean(0))
@@ -144,11 +156,18 @@ class ZRMTrainer(BaseTrainer):
         # the loss
         loss = (
             aux['lm_loss'] +
-            self.config.trainer.kl_weight * aux['base_kl_per_token']
+            aux['input_lm_loss'] +
+            aux['base_kl_per_token']
         )
 
         # check for NaNs
         aux["nan_loss"] = (~torch.isfinite(loss)).any().float()
+
+        # count the number of tokens
+        aux["atom_count"] = (
+            (batch['input_ids'] != pad_token_id).long().sum() +
+            (batch['output_ids'] != pad_token_id).long().sum()
+        )
 
         return loss, aux
     

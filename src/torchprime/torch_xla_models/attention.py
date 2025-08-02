@@ -37,7 +37,7 @@ class AttentionModule(nn.Module):
     self.config = config
     self.kernel_config = kernel_config
 
-  @xp.trace_me("AttentionModule")
+  # @xp.trace_me("AttentionModule")
   def forward(
     self,
     query_states: torch.Tensor,  # (batch_size, num_heads, q_len, head_dim)

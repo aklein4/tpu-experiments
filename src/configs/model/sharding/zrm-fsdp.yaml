@@ -49,15 +49,16 @@ decoder.layers.*.mlp.gate_up_proj.lora_up.weight: [fsdp, null]
 
 
 encoder_input_emb: [null, fsdp]
-encoder_sep_token: [fsdp]
+encoder_sep_emb: [fsdp]
 encoder_output_emb: [null, fsdp]
 encoder_z_tokens: [null, fsdp]
 
 generator_input_emb: [null, fsdp]
 generator_z_tokens: [null, fsdp]
 
-decoder_input_emb: [null, fsdp]
+decoder_start_token: [fsdp]
 decoder_z_tokens: [null, fsdp]
+decoder_input_emb: [null, fsdp]
 decoder_start_output_token: [fsdp]
 decoder_output_emb: [null, fsdp]
 

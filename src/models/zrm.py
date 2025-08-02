@@ -105,7 +105,7 @@ class ZRMModel(nn.Module):
             ),
             (
                 self.decoder,
-                [self.input_length, self.z_length, self.output_length]
+                [1 + self.z_length, self.input_length, self.output_length]
             )
         ]
         for transformer, splits in transformer_splits:
@@ -133,7 +133,7 @@ class ZRMModel(nn.Module):
         self.encoder_input_emb = nn.Parameter(
             torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
-        self.encoder_sep_token = nn.Parameter(
+        self.encoder_sep_emb = nn.Parameter(
             torch.randn(self.hidden_size) / self.lr_scaler
         )
         self.encoder_output_emb = nn.Parameter(
@@ -150,11 +150,14 @@ class ZRMModel(nn.Module):
             torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
         )
 
-        self.decoder_input_emb = nn.Parameter(
-            torch.zeros(1, self.hidden_size) / self.lr_scaler
+        self.decoder_start_token = nn.Parameter(
+            torch.randn(self.hidden_size) / self.lr_scaler
         )
         self.decoder_z_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
+        )
+        self.decoder_input_emb = nn.Parameter(
+            torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
         self.decoder_start_output_token = nn.Parameter(
             torch.randn(self.hidden_size) / self.lr_scaler
@@ -282,7 +285,7 @@ class ZRMModel(nn.Module):
         generator_mu = generator_mu * self.mu_scale
 
         # run the decoder   
-        lm_logits = self.decode(
+        input_logits, output_logits = self.decode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             input_mask=input_mask,
@@ -293,7 +296,8 @@ class ZRMModel(nn.Module):
         )
 
         return {
-            "lm_logits": lm_logits,
+            "lm_logits": input_logits,
+            "output_logits": output_logits,
             "encoder_mu": encoder_mu,
             "generator_mu": generator_mu,
             "encoder_mu_base": encoder_mu_base,
@@ -333,7 +337,7 @@ class ZRMModel(nn.Module):
             unsqueeze_to_batch(self.encoder_output_emb, output_tokens) * self.lr_scaler +
             torch.cat(
                 [
-                    output_tokens[:, :1] + unsqueeze_to_batch(self.encoder_sep_token[None], output_tokens[:, :1]) * self.lr_scaler,
+                    output_tokens[:, :1] + unsqueeze_to_batch(self.encoder_sep_emb[None], output_tokens[:, :1]) * self.lr_scaler,
                     output_tokens[:, 1:],
                 ],
                 dim=-2
@@ -466,14 +470,20 @@ class ZRMModel(nn.Module):
     ):
         
         # construct the decoder input
+        z_states = torch.cat(
+            [
+                expand_to_batch(self.decoder_start_token[None], input_tokens) * self.lr_scaler,
+                (
+                    unsqueeze_to_batch(self.decoder_z_tokens, input_tokens) * self.lr_scaler +
+                    self.decoder_z_proj_in(z)
+                )
+            ],
+            dim=-2
+        )
+        
         input_states = (
             unsqueeze_to_batch(self.decoder_input_emb, input_tokens) * self.lr_scaler +
             input_tokens
-        )
-
-        z_states = (
-            unsqueeze_to_batch(self.decoder_z_tokens, input_tokens) * self.lr_scaler +
-            self.decoder_z_proj_in(z)
         )
 
         output_states = (
@@ -486,8 +496,8 @@ class ZRMModel(nn.Module):
 
         decoder_states = torch.cat(
             [
-                input_states,
                 z_states,
+                input_states,
                 output_states,
             ],
             dim=-2
@@ -496,8 +506,8 @@ class ZRMModel(nn.Module):
         # create the position ids
         position_mask = torch.cat(
             [
-                input_mask,
                 torch.ones_like(z_states[..., 0]),
+                input_mask,
                 torch.cat(
                     [
                         torch.ones_like(output_mask[..., :1]),
@@ -513,8 +523,8 @@ class ZRMModel(nn.Module):
         # create the bias
         attention_bias = torch.cat(
             [
-                input_bias,
                 torch.zeros_like(z_states[..., 0]),
+                input_bias,
                 torch.cat(
                     [
                         torch.zeros_like(output_bias[..., :1]),
@@ -534,7 +544,11 @@ class ZRMModel(nn.Module):
         )
         
         # get the lm head logits
-        lm_logits = self.lm_head(decoder_states[:, -self.output_length:])
+        input_states = decoder_states[:, self.z_length+1:self.z_length+1+self.input_length]
+        output_states = decoder_states[:, -self.output_length:]
 
-        return lm_logits
+        input_logits = self.lm_head(input_states[:, :-1])
+        output_logits = self.lm_head(output_states)
+
+        return input_logits, output_logits
     

@@ -39,7 +39,6 @@ output_length: 512
 z_length: 384
 
 z_size: 128
-z_info: 4.0
 
 lora_rank: 128
 

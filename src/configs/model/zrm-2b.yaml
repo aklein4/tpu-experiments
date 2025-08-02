@@ -39,11 +39,7 @@ output_length: 512
 z_length: 384
 
 z_size: 128
-z_info: 4.0
 
 lora_rank: 128
 
-condition_rank: 256
-condition_size: 4096
-
-pad_bias: -10.0
+pad_bias: -20.0

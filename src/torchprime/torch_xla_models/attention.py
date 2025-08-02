@@ -32,10 +32,11 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
 
 
 class AttentionModule(nn.Module):
-  def __init__(self, config, kernel_config: dict[str, Any] | None = None):
+  def __init__(self, config, kernel_config: dict[str, Any] | None = None, is_causal: bool = True):
     super().__init__()
     self.config = config
     self.kernel_config = kernel_config
+    self.is_causal = is_causal
 
   # @xp.trace_me("AttentionModule")
   def forward(
@@ -117,7 +118,7 @@ class AttentionModule(nn.Module):
             value=value_states,
             config=sa_config.to_json(),
             decoder_segment_ids=None,
-            causal=False,
+            causal=self.is_causal,
             q_seq_shards=cp_size,
           )[0]
         else:
@@ -162,7 +163,7 @@ class AttentionModule(nn.Module):
           query_states,
           key_states,
           value_states,
-          causal=True,
+          causal=self.is_causal,
           partition_spec=self.partition_spec,
         )
         attn_output = attn_output[:, :, :og_len, :]

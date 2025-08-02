@@ -98,8 +98,6 @@ class ZRMTrainer(BaseTrainer):
 
             'threshold_step': self.threshold_step,
             'activated': self.activated.long(),
-
-            'frac_labelled': (labels != pad_token_id).float().mean(),
         }
 
         # handle input lm

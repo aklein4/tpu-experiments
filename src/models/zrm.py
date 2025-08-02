@@ -102,6 +102,11 @@ class ZCrossAttention(nn.Module):
             self.num_heads * self.head_dim,
             bias=config.attention_bias,
         )
+        self.q_proj = LoRaModulator(
+            self.q_proj,
+            config.lora_rank,
+            [config.input_length, config.output_length]
+        )
 
         self.k_proj = nn.Linear(
             self.z_size,

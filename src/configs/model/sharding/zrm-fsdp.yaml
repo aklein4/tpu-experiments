@@ -55,13 +55,14 @@ decoder.layers.*.mlp.gate_up_proj.lora_down.weight: [null, fsdp]
 decoder.layers.*.mlp.gate_up_proj.lora_up.weight: [fsdp, null]
 
 decoder.layers.*.cross_attn_norm.weight: [fsdp]
-decoder.layers.*.cross_attn.q_proj.weight: [fsdp, null]
+decoder.layers.*.cross_attn.q_proj.base_linear.weight: [fsdp, null]
+decoder.layers.*.cross_attn.q_proj.lora_down.weight: [null, fsdp]
+decoder.layers.*.cross_attn.q_proj.lora_up.weight: [fsdp, null]
 decoder.layers.*.cross_attn.k_proj.weight: [fsdp, null]
 decoder.layers.*.cross_attn.v_proj.weight: [fsdp, null]
-decoder.layers.*.cross_attn.o_proj.weight: [fsdp, null]
 decoder.layers.*.cross_attn.k_emb: [null, fsdp]
 decoder.layers.*.cross_attn.v_emb: [null, fsdp]
-
+decoder.layers.*.cross_attn.o_proj.weight: [fsdp, null]
 
 # inputs
 encoder_input_emb: [null, fsdp]

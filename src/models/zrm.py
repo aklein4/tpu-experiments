@@ -191,11 +191,9 @@ class ZRMDecoderLayer(nn.Module):
         z: torch.FloatTensor | None = None,
     ):
 
-        residual = hidden_states
-
-        hidden_states = self.input_layernorm(hidden_states)
-
         # Self Attention
+        residual = hidden_states
+        hidden_states = self.input_layernorm(hidden_states)
         hidden_states = self.self_attn(
             hidden_states=hidden_states,
             attention_mask=attention_mask,
@@ -205,18 +203,19 @@ class ZRMDecoderLayer(nn.Module):
         )
         hidden_states = residual + hidden_states
 
-        # Fully Connected
-        residual = hidden_states
-        hidden_states = self.post_attention_layernorm(hidden_states)
-        hidden_states = self.mlp(hidden_states)
-        hidden_states = residual + hidden_states
-
+        # Cross Attention
         residual = hidden_states
         hidden_states = self.cross_attn_norm(hidden_states)
         hidden_states = self.cross_attn(
             hidden_states=hidden_states,
             z=z,
         )
+        hidden_states = residual + hidden_states
+
+        # Fully Connected
+        residual = hidden_states
+        hidden_states = self.post_attention_layernorm(hidden_states)
+        hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
         return hidden_states
@@ -255,7 +254,7 @@ class ZRMModel(nn.Module):
                 [self.input_length, self.z_length]
             ),
             (
-                self.generator,
+                self.decoder,
                 [self.input_length, self.output_length]
             ),
         ]

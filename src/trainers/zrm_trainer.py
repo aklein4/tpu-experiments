@@ -126,7 +126,7 @@ class ZRMTrainer(BaseTrainer):
         base_check = kl_div(out['encoder_mu_base'], out['generator_mu'])
         w_kl = get_w_kl(base_check)
         kl_base = kl_div(
-            scale_gradient(out['encoder_mu_base'], self.config.trainer.kl_weight * w_kl),
+            scale_gradient(out['encoder_mu_base'], self.config.trainer.kl_weight * w_kl[..., None]),
             out['generator_mu']
         )
         aux['base_kl_per_token'] = per_token(

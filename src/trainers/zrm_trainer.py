@@ -123,13 +123,14 @@ class ZRMTrainer(BaseTrainer):
         aux['elbo'] = aux['lm_loss'] + aux['true_kl_per_token']
 
         # base kl
+        base_check = kl_div(out['encoder_mu_base'], out['generator_mu'])
+        w_kl = get_w_kl(base_check)
         kl_base = kl_div(
-            scale_gradient(out['encoder_mu_base'], self.config.trainer.kl_weight),
+            scale_gradient(out['encoder_mu_base'], self.config.trainer.kl_weight * w_kl),
             out['generator_mu']
         )
-        w_kl = get_w_kl(kl_base)
         aux['base_kl_per_token'] = per_token(
-            kl_base * w_kl, labels, pad_token_id
+            kl_base, labels, pad_token_id
         )
         aux['base_kl_parties'] = effective_parties(kl_base.mean(0))
         

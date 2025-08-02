@@ -249,6 +249,10 @@ class ZRMModel(nn.Module):
                 self.generator,
                 [self.input_length, self.z_length]
             ),
+            (
+                self.generator,
+                [self.input_length, self.output_length]
+            ),
         ]
         for transformer, splits in transformer_splits:
             transformer: LlamaModel
@@ -273,7 +277,6 @@ class ZRMModel(nn.Module):
                 for base_layer in self.decoder.layers
             ]
         )
-        self.decoder.embed_tokens = None
         
         # LM components
         self.embed_tokens = nn.Embedding(self.vocab_size, self.hidden_size)

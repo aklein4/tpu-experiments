@@ -14,6 +14,8 @@ import torch_xla
 import torch_xla.runtime as xr
 import transformers
 
+import torch_xla.core.xla_model as xm
+
 from torchprime.torch_xla_models.model import model_utils
 from torchprime.torch_xla_models.utils.config_utils import config_vaidator
 
@@ -77,6 +79,7 @@ def main(config: omegaconf.DictConfig):
             config.model.pretrained_step,
             remove_folder=True
         )
+    xm.rendezvous("load_model")
 
     # print model information
     model_utils.log_parameter_breakdown(model, logger)

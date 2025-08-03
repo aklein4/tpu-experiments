@@ -342,7 +342,7 @@ class ZRMModel(nn.Module):
         self.enc_mu_extra_std = nn.Parameter(
             torch.ones(self.z_length, self.z_size)
         )
-        self.enc_mu_inited = False
+        self.enc_mu_inited = self.config.init_enc_mu_inited
 
         # scales to help with mu scaling
         self.mu_scale = 1.0 # np.sqrt(2 * np.log(self.vocab_size) / self.z_size)

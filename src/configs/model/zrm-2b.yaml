@@ -35,6 +35,8 @@ rms_norm_eps: 1.0e-05
 # choose attention_kernel from: [flash_attention, splash_attention, null]
 attention_kernel: flash_attention
 
+init_enc_mu_inited: false
+
 input_length: 512
 output_length: 512
 z_length: 384

@@ -335,6 +335,11 @@ class BaseTrainer:
                 batch = next(train_iterator)
             self.step = step
 
+            if self.config.model.pretrained_step is not None and step < (self.config.model.pretrained_step + 3):
+                if step % 10 == 0:
+                    logger.info(f"Skipping step {step} as it is before the pretrained step {self.config.model.pretrained_step}")
+                continue
+
             # when context parallel and load balance context parallel is enabled,
             # we will reorder the sequence here for each batch
             if lb_cp_enabled(self.config):

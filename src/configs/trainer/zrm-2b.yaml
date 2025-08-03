@@ -37,6 +37,9 @@ max_grad_norm: 1.0
 # Set to a number to clip gradients by the specified max absolute value.
 max_grad_value: null
 
+init_threshold_step: 0
+init_activated: false
+
 alpha_scale: 4.0
 
 gen_grad_wait: 0

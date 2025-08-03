@@ -7,6 +7,7 @@ defaults:
 model_id: zrm-2b
 model_class: zrm.ZRMModel  # Used to import the model from this class
 pretrained_model: null
+pretrained_step: null
 
 vocab_size: 32101
 bos_token_id: 1

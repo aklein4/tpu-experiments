@@ -57,9 +57,9 @@ class ZRMTrainer(BaseTrainer):
         labels = batch['output_ids']
 
         if not hasattr(self, 'threshold_step'):
-            self.threshold_step = torch.zeros_like(labels.view(-1).long()).sum()
+            self.threshold_step = torch.zeros_like(labels.view(-1).long()).sum() + self.config.trainer.init_threshold_step
         if not hasattr(self, 'activated'):
-            self.activated = torch.zeros_like(self.threshold_step.bool()).any()
+            self.activated = torch.zeros_like(self.threshold_step.bool()).any() | self.config.trainer.init_activated
 
         alpha = cosine_schedule(
             self.threshold_step, self.config.trainer.alpha_wait, self.config.trainer.alpha_warmup, up=False

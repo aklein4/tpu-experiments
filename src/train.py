@@ -20,6 +20,7 @@ from torchprime.torch_xla_models.utils.config_utils import config_vaidator
 from data.datasets import get_dataset
 from utils import constants
 from utils.import_utils import import_class
+from models import load_checkpoint_state
 
 transformers.utils.check_min_version("4.39.3")
 logger = logging.getLogger(__name__)
@@ -67,6 +68,15 @@ def main(config: omegaconf.DictConfig):
     with model_utils.set_default_dtype(model_dtype), torch_xla.device():
         model_cls = import_class(config.model.model_class, constants.MODEL_MODULE)
         model = model_cls(config.model)
+
+    # load the pretrained model if specified
+    if config.model.pretrained_model is not None:
+        model = load_checkpoint_state(
+            model,
+            config.model.pretrained_model,
+            config.model.pretrained_step,
+            remove_folder=True
+        )
 
     # print model information
     model_utils.log_parameter_breakdown(model, logger)

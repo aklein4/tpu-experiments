@@ -582,10 +582,9 @@ class ZRMModel(nn.Module):
         )
 
         # construct the decoder input
-        print(unsqueeze_to_batch(self.decoder_start_z_token[None], z).shape, (unsqueeze_to_batch(self.decoder_z_tokens, z) + self.decoder_z_proj_in(z)).shape)
         z_states = torch.cat(
             [
-                unsqueeze_to_batch(self.decoder_start_z_token[None], z) * self.lr_scaler,
+                expand_to_batch(self.decoder_start_z_token[None], z) * self.lr_scaler,
                 unsqueeze_to_batch(self.decoder_z_tokens, z) * self.lr_scaler + self.decoder_z_proj_in(z)
             ],
             dim=-2

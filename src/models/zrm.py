@@ -67,7 +67,6 @@ class ModulatingRMSNorm(nn.Module):
         w = unsqueeze_to_batch(w, hidden_states)
         b = unsqueeze_to_batch(b, hidden_states)
 
-        print(" ===== Norm shapes:", hidden_states.shape, w.shape, b.shape, flush=True)
         return (w * hidden_states) + b
 
 
@@ -197,7 +196,7 @@ class ZRMModel(nn.Module):
         self.encoder.layers = HomogeneousSequential(
             *[
                 ZRMEncoderLayer(encoder_conf, base_layer)
-                for base_layer in self.decoder.layers
+                for base_layer in self.encoder.layers
             ]
         )
         
@@ -403,7 +402,6 @@ class ZRMModel(nn.Module):
             self.encoder_noise_proj_in(self._shift_right(noise))
         )
 
-        print(" ===== Encoder shapes:", input_states.shape, output_states.shape, z_states.shape, flush=True)
         encoder_states = torch.cat(
             [
                 input_states,

@@ -82,7 +82,8 @@ class ZRMTrainer(BaseTrainer):
             ignore_index=pad_token_id,
             shift_labels=False,
             shift_logits=False,
-            loss_threshold=self.config.trainer.lm_loss_threshold
+            loss_threshold_lower=self.config.trainer.loss_threshold_lower,
+            loss_threshold_upper=self.config.trainer.loss_threshold_upper
         )
         self.activated = (
             self.activated | (lm_losses['acc'] >= self.config.trainer.acc_threshold).any()
@@ -108,7 +109,8 @@ class ZRMTrainer(BaseTrainer):
             ignore_index=pad_token_id,
             shift_labels=True,
             shift_logits=False,
-            loss_threshold=self.config.trainer.input_lm_loss_threshold
+            loss_threshold_lower=self.config.trainer.loss_threshold_lower,
+            loss_threshold_upper=self.config.trainer.loss_threshold_upper
         )
         aux['input_lm_loss'] = input_losses['loss']
         aux['input_acc'] = input_losses['acc']

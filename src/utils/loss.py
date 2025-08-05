@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from torch.nn import CrossEntropyLoss
+from utils.torch_utils import scale_gradient
 
 
 def fast_lm_loss(
@@ -13,7 +14,8 @@ def fast_lm_loss(
     ignore_index: int = -100,
     shift_logits: bool = True,
     shift_labels: bool = True,
-    loss_threshold: float | None = None,
+    loss_threshold_lower: float | None = None,
+    loss_threshold_upper: float | None = None,
 ):
     
     # shift if needed
@@ -38,16 +40,24 @@ def fast_lm_loss(
     p = logp.exp()
 
     # calculate the loss
-    if loss_threshold is None:
+    if loss_threshold_lower is None:
+        assert loss_threshold_upper is None
+
         loss = -logp.masked_fill(~mask, 0.0).sum() / (mask_sum + 1)
         loss_threshold_perc = 0.0
 
     else:
-        logp_mask = logp > np.log(loss_threshold)
-        logp_clipped = torch.where(logp_mask, logp.detach(), logp)
+        assert loss_threshold_upper is not None
+        upper, lower = np.log(loss_threshold_upper), np.log(loss_threshold_lower)
 
-        loss = -logp_clipped.masked_fill(~mask, 0.0).sum() / (mask_sum + 1)
-        loss_threshold_perc = logp_mask.float().masked_fill(~mask, 0.0).sum() / (mask_sum + 1)
+        logp_mask = 1 - torch.clip(
+            (logp - lower) / (upper - lower),
+            0.0, 1.0
+        ).detach()
+        logp_scaled = scale_gradient(logp, logp_mask)
+
+        loss = -logp_scaled.masked_fill(~mask, 0.0).sum() / (mask_sum + 1)
+        loss_threshold_perc = logp_mask.masked_fill(~mask, 0.0).sum() / (mask_sum + 1)
         
     # calculate the accuracy
     correct = (logits.argmax(dim=-1) == labels).float()

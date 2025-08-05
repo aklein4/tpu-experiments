@@ -50,7 +50,8 @@ alpha_warmup: 10000
 
 acc_threshold: 0.75
 
-lm_loss_threshold: 0.75
+loss_threshold_lower: 0.70
+loss_threshold_upper: 0.80
 
 kl_weight: 0.2
 

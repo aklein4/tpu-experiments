@@ -403,6 +403,7 @@ class ZRMModel(nn.Module):
             self.encoder_noise_proj_in(self._shift_right(noise))
         )
 
+        print(" ===== Encoder shapes:", input_states.shape, output_states.shape, z_states.shape, flush=True)
         encoder_states = torch.cat(
             [
                 input_states,

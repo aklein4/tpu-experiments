@@ -615,7 +615,7 @@ class ZRMModel(nn.Module):
         # create the position ids
         position_mask = torch.cat(
             [
-                torch.ones_like(z_states[..., :1]),
+                torch.ones_like(z_states[..., 0]),
                 input_mask,
                 torch.cat(
                     [
@@ -632,7 +632,7 @@ class ZRMModel(nn.Module):
         # create the bias
         attention_bias = torch.cat(
             [
-                torch.zeros_like(z_states[..., :1]),
+                torch.zeros_like(z_states[..., 0]),
                 input_bias,
                 torch.cat(
                     [

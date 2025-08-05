@@ -67,6 +67,7 @@ class ModulatingRMSNorm(nn.Module):
         w = unsqueeze_to_batch(w, hidden_states)
         b = unsqueeze_to_batch(b, hidden_states)
 
+        print(" ===== Norm shapes:", hidden_states.shape, w.shape, b.shape, flush=True)
         return (w * hidden_states) + b
 
 

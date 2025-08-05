@@ -264,7 +264,7 @@ class ZRMModel(nn.Module):
         )
 
         # scales to help with mu scaling
-        self.mu_scale = 1.0 # np.sqrt(2 * np.log(self.vocab_size) / self.z_size)
+        self.mu_scale = np.sqrt(2 * np.log(self.vocab_size) / self.z_size)
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)

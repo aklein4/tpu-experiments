@@ -81,7 +81,8 @@ class ZRMTrainer(BaseTrainer):
             labels,
             ignore_index=pad_token_id,
             shift_labels=False,
-            shift_logits=False
+            shift_logits=False,
+            loss_threshold=self.config.trainer.lm_loss_threshold
         )
         self.activated = (
             self.activated | (lm_losses['acc'] >= self.config.trainer.acc_threshold).any()
@@ -91,6 +92,7 @@ class ZRMTrainer(BaseTrainer):
             'lm_loss': lm_losses['loss'],
             'acc': lm_losses['acc'],
             'pcorr': lm_losses['pcorr'],
+            'loss_threshold_perc': lm_losses['loss_threshold_perc'],
         
             'alpha': alpha,
             'noise_scale': gen_grad_scale,
@@ -105,11 +107,13 @@ class ZRMTrainer(BaseTrainer):
             batch['input_ids'],
             ignore_index=pad_token_id,
             shift_labels=True,
-            shift_logits=False
+            shift_logits=False,
+            loss_threshold=self.config.trainer.input_lm_loss_threshold
         )
         aux['input_lm_loss'] = input_losses['loss']
         aux['input_acc'] = input_losses['acc']
         aux['input_pcorr'] = input_losses['pcorr']
+        aux['input_loss_threshold_perc'] = input_losses['loss_threshold_perc']
 
         # true kl
         kl_true = kl_div(

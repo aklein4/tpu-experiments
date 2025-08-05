@@ -167,10 +167,10 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
 class LlamaAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(self, config: DictConfig, layer_idx: int | None = None):
+    def __init__(self, config: DictConfig, layer_idx: int | None = None, is_causal: bool = True):
         super().__init__()
         self.config = config
-        self.attention_block = AttentionModule(config)
+        self.attention_block = AttentionModule(config, is_causal=is_causal)
         self.layer_idx = layer_idx
         if layer_idx is None:
             logger.warning_once(
@@ -186,7 +186,7 @@ class LlamaAttention(nn.Module):
         self.num_key_value_groups = self.num_heads // self.num_key_value_heads
         self.max_position_embeddings = config.max_position_embeddings
         self.rope_theta = config.rope_theta
-        self.is_causal = True
+        self.is_causal = is_causal
 
         if (self.head_dim * self.num_heads) != self.hidden_size:
             raise ValueError(

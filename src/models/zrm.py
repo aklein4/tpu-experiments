@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 
 from torchprime.torch_xla_models.scan_layers import HomogeneousSequential
 
-from models.llama import LlamaModel, LlamaAttention
+from models.llama import LlamaModel, LlamaAttention, LlamaDecoderLayer
 from utils.torch_utils import (
     scale_gradient,
     expand_to_batch,
@@ -70,9 +70,44 @@ class ModulatingRMSNorm(nn.Module):
         return (w * hidden_states) + b
 
 
+class ModulatingOutLinear(nn.Module):
+
+    def __init__(
+        self,
+        base_layer: nn.Linear,
+        splits: list[int],
+    ):
+        super().__init__()
+
+        self.base_linear = base_layer
+        self.hidden_size = base_layer.out_features
+        self.splits = splits
+        self.num_splits = len(splits)
+
+        self.weight = nn.Parameter(
+            torch.ones(self.num_splits, self.hidden_size) / np.sqrt(self.hidden_size)
+        )
+
+    
+    def forward(self, hidden_states):
+        y = self.base_linear(hidden_states)
+
+        w = torch.cat(
+            [
+                we[None].expand(self.splits[i], -1)
+                for i, we in enumerate(self.weight)
+            ],
+            dim=0
+        ) * np.sqrt(self.hidden_size)
+
+        w = unsqueeze_to_batch(w, y)
+
+        return y * w
+
+
 class ZRMEncoderLayer(nn.Module):
 
-    def __init__(self, config, base_layer: nn.Module):
+    def __init__(self, config, base_layer: LlamaDecoderLayer):
         super().__init__()
 
         self.hidden_size = base_layer.hidden_size
@@ -91,6 +126,10 @@ class ZRMEncoderLayer(nn.Module):
         )
         self.bi_attn = LlamaAttention(
             config, layer_idx=self.self_attn.layer_idx, is_causal=False
+        )
+        self.bi_attn.o_proj = ModulatingOutLinear(
+            self.bi_attn.o_proj,
+            [config.input_length, config.output_length]
         )
 
 
@@ -122,7 +161,7 @@ class ZRMEncoderLayer(nn.Module):
             hidden_states=hidden_states,
             attention_mask=None,
             position_ids=position_ids[:, :self.bi_attn_length],
-            position_embeddings=position_embeddings[:, :self.bi_attn_length],
+            position_embeddings=(p[:, :self.bi_attn_length] for p in position_embeddings),
             elementwise_attention_bias=elementwise_attention_bias[:, :self.bi_attn_length],
         )
         residual[:, :self.bi_attn_length] += hidden_states
@@ -180,6 +219,8 @@ class ZRMModel(nn.Module):
             transformer: LlamaModel
             
             for layer in transformer.layers:
+                layer: LlamaDecoderLayer
+
                 layer.input_layernorm = ModulatingRMSNorm(
                     self.hidden_size,
                     splits,
@@ -190,6 +231,16 @@ class ZRMModel(nn.Module):
                     splits,
                     eps=config.rms_norm_eps
                 )
+
+                layer.self_attn.o_proj = ModulatingOutLinear(
+                    layer.self_attn.o_proj,
+                    splits
+                )
+                layer.mlp.down_proj = ModulatingOutLinear(
+                    layer.mlp.down_proj,
+                    splits
+                )
+
             
             transformer.embed_tokens = None
 

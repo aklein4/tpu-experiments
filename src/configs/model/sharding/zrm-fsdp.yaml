@@ -9,18 +9,21 @@ encoder.layers.*.input_layernorm.weight: [null, fsdp]
 encoder.layers.*.input_layernorm.bias: [null, fsdp]
 
 encoder.layers.*.self_attn.qkv_proj.weight: [fsdp, null]
-encoder.layers.*.self_attn.o_proj.weight: [fsdp, null]
+encoder.layers.*.self_attn.o_proj.base_linear.weight: [fsdp, null]
+encoder.layers.*.self_attn.o_proj.weight: [null, fsdp]
 
 encoder.layers.*.bi_attn_norm.weight: [null, fsdp]
 encoder.layers.*.bi_attn_norm.bias: [null, fsdp]
 
 encoder.layers.*.bi_attn.qkv_proj.weight: [fsdp, null]
-encoder.layers.*.bi_attn.o_proj.weight: [fsdp, null]
+encoder.layers.*.bi_attn.o_proj.base_linear.weight: [fsdp, null]
+encoder.layers.*.bi_attn.o_proj.weight: [null, fsdp]
 
 encoder.layers.*.post_attention_layernorm.weight: [null, fsdp]
 encoder.layers.*.post_attention_layernorm.bias: [null, fsdp]
 
 encoder.layers.*.mlp.gate_up_proj.weight: [fsdp, null]
+encoder.layers.*.mlp.down_proj.base_linear.weight: [null, fsdp]
 encoder.layers.*.mlp.down_proj.weight: [null, fsdp]
 
 encoder.norm.weight: [fsdp]
@@ -30,12 +33,14 @@ generator.layers.*.input_layernorm.weight: [null, fsdp]
 generator.layers.*.input_layernorm.bias: [null, fsdp]
 
 generator.layers.*.self_attn.qkv_proj.weight: [fsdp, null]
-generator.layers.*.self_attn.o_proj.weight: [fsdp, null]
+generator.layers.*.self_attn.o_proj.base_linear.weight: [fsdp, null]
+generator.layers.*.self_attn.o_proj.weight: [null, fsdp]
 
 generator.layers.*.post_attention_layernorm.weight: [null, fsdp]
 generator.layers.*.post_attention_layernorm.bias: [null, fsdp]
 
 generator.layers.*.mlp.gate_up_proj.weight: [fsdp, null]
+generator.layers.*.mlp.down_proj.base_linear.weight: [null, fsdp]
 generator.layers.*.mlp.down_proj.weight: [null, fsdp]
 
 generator.norm.weight: [fsdp]
@@ -45,12 +50,14 @@ decoder.layers.*.input_layernorm.weight: [null, fsdp]
 decoder.layers.*.input_layernorm.bias: [null, fsdp]
 
 decoder.layers.*.self_attn.qkv_proj.weight: [fsdp, null]
-decoder.layers.*.self_attn.o_proj.weight: [fsdp, null]
+decoder.layers.*.self_attn.o_proj.base_linear.weight: [fsdp, null]
+decoder.layers.*.self_attn.o_proj.weight: [null, fsdp]
 
 decoder.layers.*.post_attention_layernorm.weight: [null, fsdp]
 decoder.layers.*.post_attention_layernorm.bias: [null, fsdp]
 
 decoder.layers.*.mlp.gate_up_proj.weight: [fsdp, null]
+decoder.layers.*.mlp.down_proj.base_linear.weight: [null, fsdp]
 decoder.layers.*.mlp.down_proj.weight: [null, fsdp]
 
 decoder.norm.weight: [fsdp]

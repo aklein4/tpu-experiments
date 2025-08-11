@@ -312,9 +312,10 @@ class ZRMModel(nn.Module):
         output_bias = (output_ids == self.config.pad_token_id).float() * self.config.pad_bias
 
         # get the noise
-        noise = torch.randn_like(
-            input_tokens[:, :self.z_length, :self.z_size],
-        ) * noise_scale
+        noise = torch.randn(
+            input_tokens.shape[0], self.z_length, self.hidden_size,
+            device=input_tokens.device, dtype=input_tokens.dtype
+        )
 
         # run the encoder
         encoder_mu_base, encoder_mu_extra = self.encode(
@@ -405,8 +406,6 @@ class ZRMModel(nn.Module):
             )
         )
 
-        print("1:", (unsqueeze_to_batch(self.encoder_z_tokens, input_tokens) * self.lr_scaler).shape)
-        print("2:", (self.encoder_noise_proj_in(self._shift_right(noise))).shape)
         z_states = (
             unsqueeze_to_batch(self.encoder_z_tokens, input_tokens) * self.lr_scaler +
             self.encoder_noise_proj_in(self._shift_right(noise))

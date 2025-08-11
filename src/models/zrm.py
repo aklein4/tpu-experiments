@@ -313,7 +313,7 @@ class ZRMModel(nn.Module):
 
         # get the noise
         noise = torch.randn(
-            input_tokens.shape[0], self.z_length, self.hidden_size,
+            input_tokens.shape[0], self.z_length, self.z_size,
             device=input_tokens.device, dtype=input_tokens.dtype
         )
 
@@ -340,7 +340,6 @@ class ZRMModel(nn.Module):
         enc_mu_for_generator = scale_gradient(
             encoder_mu, gen_grad_scale
         )
-        print(encoder_mu.shape, enc_mu_for_generator.shape, noise.shape)
         generator_mu = self.generate(
             input_tokens=input_tokens,
             input_mask=input_mask,

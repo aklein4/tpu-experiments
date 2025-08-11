@@ -161,7 +161,7 @@ class ZRMTrainer(BaseTrainer):
         # the loss
         loss = (
             aux['lm_loss'] +
-            aux['input_lm_loss'] +
+            # aux['input_lm_loss'] +
             self.config.trainer.kl_weight * aux['base_kl_per_token']
         )
 
@@ -170,7 +170,7 @@ class ZRMTrainer(BaseTrainer):
 
         # count the number of tokens
         aux["atom_count"] = (
-            (batch['input_ids'] != pad_token_id).long().sum() +
+            # (batch['input_ids'] != pad_token_id).long().sum() +
             (batch['output_ids'] != pad_token_id).long().sum()
         )
 

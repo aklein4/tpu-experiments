@@ -340,6 +340,7 @@ class ZRMModel(nn.Module):
         enc_mu_for_generator = scale_gradient(
             encoder_mu, gen_grad_scale
         )
+        print(encoder_mu.shape, enc_mu_for_generator.shape, noise.shape)
         generator_mu = self.generate(
             input_tokens=input_tokens,
             input_mask=input_mask,

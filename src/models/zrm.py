@@ -405,7 +405,8 @@ class ZRMModel(nn.Module):
             )
         )
 
-        print(self.encoder_z_tokens.shape, input_tokens.shape, noise.shape)
+        print("1:", (unsqueeze_to_batch(self.encoder_z_tokens, input_tokens) * self.lr_scaler).shape)
+        print("2:", (self.encoder_noise_proj_in(self._shift_right(noise))).shape)
         z_states = (
             unsqueeze_to_batch(self.encoder_z_tokens, input_tokens) * self.lr_scaler +
             self.encoder_noise_proj_in(self._shift_right(noise))

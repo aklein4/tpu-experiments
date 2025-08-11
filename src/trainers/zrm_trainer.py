@@ -103,19 +103,19 @@ class ZRMTrainer(BaseTrainer):
         }
 
         # handle input lm
-        input_losses = loss_utils.fast_lm_loss(
-            out['input_logits'],
-            batch['input_ids'],
-            ignore_index=pad_token_id,
-            shift_labels=True,
-            shift_logits=False,
-            loss_threshold_lower=self.config.trainer.loss_threshold_lower,
-            loss_threshold_upper=self.config.trainer.loss_threshold_upper
-        )
-        aux['input_lm_loss'] = input_losses['loss']
-        aux['input_acc'] = input_losses['acc']
-        aux['input_pcorr'] = input_losses['pcorr']
-        aux['input_loss_threshold_perc'] = input_losses['loss_threshold_perc']
+        # input_losses = loss_utils.fast_lm_loss(
+        #     out['input_logits'],
+        #     batch['input_ids'],
+        #     ignore_index=pad_token_id,
+        #     shift_labels=True,
+        #     shift_logits=False,
+        #     loss_threshold_lower=self.config.trainer.loss_threshold_lower,
+        #     loss_threshold_upper=self.config.trainer.loss_threshold_upper
+        # )
+        # aux['input_lm_loss'] = input_losses['loss']
+        # aux['input_acc'] = input_losses['acc']
+        # aux['input_pcorr'] = input_losses['pcorr']
+        # aux['input_loss_threshold_perc'] = input_losses['loss_threshold_perc']
 
         # true kl
         kl_true = kl_div(

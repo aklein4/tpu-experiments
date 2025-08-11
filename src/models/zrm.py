@@ -61,6 +61,7 @@ class LoRaModulator(nn.Module):
 
 
     def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        return self.base_linear(x)
 
         inner = (
             self.lora_down(x) * 
@@ -163,10 +164,7 @@ class ZRMModel(nn.Module):
         self.z_length = config.z_length
 
         # transformers
-        encoder_conf = config.copy()
-        encoder_conf.num_key_value_heads = config.num_attention_heads
-        self.encoder = LlamaModel(encoder_conf)
-
+        self.encoder = LlamaModel(config)
         self.generator = LlamaModel(config)
         self.decoder = LlamaModel(config)
         
@@ -182,7 +180,7 @@ class ZRMModel(nn.Module):
             ),
             (
                 self.decoder,
-                [1+self.z_length, self.input_length, self.output_length] # 1 for the start token
+                [self.input_length, self.z_length, self.output_length]
             ),
         ]
         for transformer, splits in transformer_splits:
@@ -206,7 +204,7 @@ class ZRMModel(nn.Module):
 
         self.encoder.layers = HomogeneousSequential(
             *[
-                ZRMEncoderLayer(encoder_conf, base_layer)
+                ZRMEncoderLayer(config, base_layer)
                 for base_layer in self.encoder.layers
             ]
         )
@@ -275,7 +273,7 @@ class ZRMModel(nn.Module):
         )
 
         # scales to help with mu scaling
-        self.mu_scale = 1 # np.sqrt(2 * np.log(self.vocab_size) / self.z_size)
+        self.mu_scale = np.sqrt(2 * np.log(self.vocab_size) * (self.output_length/self.z_length) / self.z_size)
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
@@ -350,7 +348,7 @@ class ZRMModel(nn.Module):
         generator_mu = generator_mu * self.mu_scale
 
         # run the decoder   
-        input_logits, output_logits = self.decode(
+        output_logits = self.decode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             input_mask=input_mask,
@@ -361,7 +359,6 @@ class ZRMModel(nn.Module):
         )
 
         return {
-            "input_logits": input_logits,
             "output_logits": output_logits,
             "encoder_mu": encoder_mu,
             "generator_mu": generator_mu,
@@ -541,18 +538,14 @@ class ZRMModel(nn.Module):
             eps=self.config.rms_norm_eps
         )
 
-        # construct the decoder input
-        z_states = torch.cat(
-            [
-                expand_to_batch(self.decoder_start_z_token[None], z) * self.lr_scaler,
-                unsqueeze_to_batch(self.decoder_z_tokens, z) * self.lr_scaler + self.decoder_z_proj_in(z)
-            ],
-            dim=-2
-        )
-
         input_states = (
             unsqueeze_to_batch(self.decoder_input_emb, input_tokens) * self.lr_scaler +
             input_tokens
+        )
+
+        z_states = (
+            unsqueeze_to_batch(self.decoder_z_tokens, z) * self.lr_scaler +
+            self.decoder_z_proj_in(z)
         )
 
         output_states = (
@@ -565,8 +558,8 @@ class ZRMModel(nn.Module):
 
         decoder_states = torch.cat(
             [
-                z_states,
                 input_states,
+                z_states,
                 output_states,
             ],
             dim=-2
@@ -575,8 +568,8 @@ class ZRMModel(nn.Module):
         # create the position ids
         position_mask = torch.cat(
             [
-                torch.ones_like(z_states[..., 0]),
                 input_mask,
+                torch.ones_like(z_states[..., 0]),
                 torch.cat(
                     [
                         torch.ones_like(output_mask[..., :1]),
@@ -592,8 +585,8 @@ class ZRMModel(nn.Module):
         # create the bias
         attention_bias = torch.cat(
             [
-                torch.zeros_like(z_states[..., 0]),
                 input_bias,
+                torch.zeros_like(z_states[..., 0]),
                 torch.cat(
                     [
                         torch.zeros_like(output_bias[..., :1]),
@@ -613,8 +606,7 @@ class ZRMModel(nn.Module):
         )
         
         # get the lm head logits
-        input_logits = self.lm_head(decoder_states[:, -(self.input_length + self.output_length):-(1+self.output_length)]) # 1 for shift
         output_logits = self.lm_head(decoder_states[:, -self.output_length:])
 
-        return input_logits, output_logits
+        return output_logits
     

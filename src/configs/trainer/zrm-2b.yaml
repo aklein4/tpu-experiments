@@ -40,7 +40,7 @@ max_grad_value: null
 init_threshold_step: 0
 init_activated: false
 
-alpha_scale: 4.0
+alpha_scale: 3.0
 
 gen_grad_wait: 0
 gen_grad_warmup: 2000

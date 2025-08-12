@@ -7,7 +7,7 @@ from omegaconf import DictConfig
 
 from torchprime.torch_xla_models.scan_layers import HomogeneousSequential
 
-from models.llama import LlamaModel, LlamaAttention, LlamaDecoderLayer, LlamaRMSNorm
+from models.llama import LlamaModel, LlamaAttention, LlamaDecoderLayer
 from utils.torch_utils import (
     scale_gradient,
     expand_to_batch,
@@ -15,64 +15,94 @@ from utils.torch_utils import (
 )
 
 
-class LoRaModulator(nn.Module):
+class ModulatingRMSNorm(nn.Module):
 
     def __init__(
         self,
-        base_linear: nn.Linear,
-        rank: int,
-        splits,
+        hidden_size: int,
+        splits: list[int],
+        eps: float = 1e-6,
+    ):
+        super().__init__()
+        
+        self.hidden_size = hidden_size
+        self.splits = splits
+        self.num_splits = len(splits)
+        self.variance_epsilon = eps
+
+        self.weight = nn.Parameter(
+            torch.ones(self.num_splits, hidden_size) / np.sqrt(hidden_size)
+        )
+        self.bias = nn.Parameter(
+            torch.zeros(self.num_splits, hidden_size) / np.sqrt(hidden_size)
+        )
+
+
+    def norm_fn(self, hidden_states):
+        input_dtype = hidden_states.dtype
+        hidden_states = hidden_states.to(torch.float32)
+        variance = hidden_states.pow(2).mean(-1, keepdim=True)
+        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
+        return hidden_states.to(input_dtype)
+
+    
+    def forward(self, hidden_states):
+        hidden_states = self.norm_fn(hidden_states)
+
+        w = torch.cat(
+            [
+                we[None].expand(self.splits[i], -1)
+                for i, we in enumerate(self.weight)
+            ],
+            dim=0
+        ) * np.sqrt(self.hidden_size)
+        b = torch.cat(
+            [
+                bi[None].expand(self.splits[i], -1)
+                for i, bi in enumerate(self.bias)
+            ],
+            dim=0
+        ) * np.sqrt(self.hidden_size)
+
+        w = unsqueeze_to_batch(w, hidden_states)
+        b = unsqueeze_to_batch(b, hidden_states)
+
+        return (w * hidden_states) + b
+
+
+class ModulatingOutLinear(nn.Module):
+
+    def __init__(
+        self,
+        base_layer: nn.Linear,
+        splits: list[int],
     ):
         super().__init__()
 
-        self.base_linear = base_linear
-        self.rank = rank
+        self.base_linear = base_layer
+        self.hidden_size = base_layer.out_features
         self.splits = splits
-
-        self.in_features = base_linear.in_features
-        self.out_features = base_linear.out_features
-
         self.num_splits = len(splits)
-        self.total_rank = self.rank * self.num_splits
 
-        self.lora_down = nn.Linear(
-            self.in_features, self.total_rank, bias=False
-        )
-        self.lora_up = nn.Linear(
-            self.total_rank, self.out_features, bias=False
+        self.out_weight = nn.Parameter(
+            torch.ones(self.num_splits, self.hidden_size) / np.sqrt(self.hidden_size)
         )
 
-        # create the mask
-        split_mask = torch.zeros(sum(splits), self.total_rank)
+    
+    def forward(self, hidden_states):
+        y = self.base_linear(hidden_states)
 
-        row_start = 0
-        col_start = 0
-        for split_size in splits:
+        w = torch.cat(
+            [
+                we[None].expand(self.splits[i], -1)
+                for i, we in enumerate(self.out_weight)
+            ],
+            dim=0
+        ) * np.sqrt(self.hidden_size)
 
-            split_mask[
-                row_start:(row_start + split_size),
-                col_start:(col_start + self.rank)
-            ] = 1.0
+        w = unsqueeze_to_batch(w, y)
 
-            row_start += split_size
-            col_start += self.rank
-
-        self.register_buffer('split_mask', split_mask, persistent=False)
-
-
-    def forward(self, x: torch.FloatTensor) -> torch.FloatTensor:
-        return self.base_linear(x)
-
-        inner = (
-            self.lora_down(x) * 
-            unsqueeze_to_batch(self.split_mask, x)
-        )
-        outer = self.lora_up(inner)
-
-        return (
-            self.base_linear(x) * np.sqrt(0.5) +
-            outer * np.sqrt(0.5)
-        )
+        return y * w
 
 
 class ZRMEncoderLayer(nn.Module):
@@ -89,16 +119,16 @@ class ZRMEncoderLayer(nn.Module):
         self.post_attention_layernorm = base_layer.post_attention_layernorm
 
         self.bi_attn_length = config.input_length + config.output_length
-        self.bi_attn_norm = LlamaRMSNorm(
+        self.bi_attn_norm = ModulatingRMSNorm(
             self.hidden_size,
-            eps=config.rms_norm_eps
+            [config.input_length, config.output_length],
+            eps=config.rms_norm_eps,
         )
         self.bi_attn = LlamaAttention(
             config, layer_idx=self.self_attn.layer_idx, is_causal=False
         )
-        self.bi_attn.qkv_proj = LoRaModulator(
-            self.bi_attn.qkv_proj,
-            config.lora_rank,
+        self.bi_attn.o_proj = ModulatingOutLinear(
+            self.bi_attn.o_proj,
             [config.input_length, config.output_length]
         )
 
@@ -155,7 +185,6 @@ class ZRMModel(nn.Module):
         self.vocab_size = config.vocab_size
         self.hidden_size = config.hidden_size
         self.z_size = config.z_size
-        self.lora_rank = config.lora_rank
         self.lr_scaler = np.sqrt(self.hidden_size)
 
         # length config
@@ -168,7 +197,7 @@ class ZRMModel(nn.Module):
         self.generator = LlamaModel(config)
         self.decoder = LlamaModel(config)
         
-        # add LoRa modulator to qkv and gate_up
+        # add modulators
         transformer_splits = [
             (
                 self.encoder,
@@ -189,14 +218,23 @@ class ZRMModel(nn.Module):
             for layer in transformer.layers:
                 layer: LlamaDecoderLayer
 
-                layer.self_attn.qkv_proj = LoRaModulator(
-                    layer.self_attn.qkv_proj,
-                    self.lora_rank,
+                layer.input_layernorm = ModulatingRMSNorm(
+                    self.hidden_size,
+                    splits,
+                    eps=config.rms_norm_eps
+                )
+                layer.post_attention_layernorm = ModulatingRMSNorm(
+                    self.hidden_size,
+                    splits,
+                    eps=config.rms_norm_eps
+                )
+
+                layer.self_attn.o_proj = ModulatingOutLinear(
+                    layer.self_attn.o_proj,
                     splits
                 )
-                layer.mlp.gate_up_proj = LoRaModulator(
-                    layer.mlp.gate_up_proj,
-                    self.lora_rank,
+                layer.mlp.down_proj = ModulatingOutLinear(
+                    layer.mlp.down_proj,
                     splits
                 )
            
@@ -234,14 +272,11 @@ class ZRMModel(nn.Module):
             torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
         )
 
-        self.decoder_start_z_token = nn.Parameter(
-            torch.randn(self.hidden_size) / self.lr_scaler
+        self.decoder_input_emb = nn.Parameter(
+            torch.randn(1, self.hidden_size) / self.lr_scaler
         )
         self.decoder_z_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
-        )
-        self.decoder_input_emb = nn.Parameter(
-            torch.randn(1, self.hidden_size) / self.lr_scaler
         )
         self.decoder_start_output_token = nn.Parameter(
             torch.randn(self.hidden_size) / self.lr_scaler
@@ -295,7 +330,6 @@ class ZRMModel(nn.Module):
         input_ids: torch.LongTensor,
         output_ids: torch.LongTensor,
         alpha: float = 0.0,
-        noise_scale: float = 1.0,
         gen_grad_scale: float = 1.0,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         assert input_ids.shape[-1] == self.input_length

@@ -63,7 +63,7 @@ class ZRMTrainer(BaseTrainer):
 
         alpha = cosine_schedule(
             self.threshold_step, self.config.trainer.alpha_wait, self.config.trainer.alpha_warmup, up=False
-        ) * np.sqrt(2 * self.config.trainer.alpha_scale / self.model.z_size)
+        ) * np.sqrt(2 * self.config.trainer.alpha_scale * (self.model.output_length/self.model.z_length) / self.model.z_size)
         gen_grad_scale = cosine_schedule(
             self.threshold_step, self.config.trainer.gen_grad_wait, self.config.trainer.gen_grad_warmup, up=True
         )
@@ -96,26 +96,11 @@ class ZRMTrainer(BaseTrainer):
             'loss_threshold_perc': lm_losses['loss_threshold_perc'],
         
             'alpha': alpha,
-            'noise_scale': gen_grad_scale,
+            'gen_grad_scale': gen_grad_scale,
 
             'threshold_step': self.threshold_step,
             'activated': self.activated.long(),
         }
-
-        # handle input lm
-        # input_losses = loss_utils.fast_lm_loss(
-        #     out['input_logits'],
-        #     batch['input_ids'],
-        #     ignore_index=pad_token_id,
-        #     shift_labels=True,
-        #     shift_logits=False,
-        #     loss_threshold_lower=self.config.trainer.loss_threshold_lower,
-        #     loss_threshold_upper=self.config.trainer.loss_threshold_upper
-        # )
-        # aux['input_lm_loss'] = input_losses['loss']
-        # aux['input_acc'] = input_losses['acc']
-        # aux['input_pcorr'] = input_losses['pcorr']
-        # aux['input_loss_threshold_perc'] = input_losses['loss_threshold_perc']
 
         # true kl
         kl_true = kl_div(
@@ -170,7 +155,6 @@ class ZRMTrainer(BaseTrainer):
 
         # count the number of tokens
         aux["atom_count"] = (
-            # (batch['input_ids'] != pad_token_id).long().sum() +
             (batch['output_ids'] != pad_token_id).long().sum()
         )
 

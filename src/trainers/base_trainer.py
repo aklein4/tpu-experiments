@@ -400,9 +400,9 @@ class BaseTrainer:
                 args=(
                     epoch,
                     step,
-                    loss.detach(),
-                    grad_norm.detach(),
-                    {k: (v.detach() if isinstance(v, torch.Tensor) else v) for k, v in aux.items()},
+                    loss.detach().clone(),
+                    grad_norm.detach().clone(),
+                    {k: (v.detach().clone() if isinstance(v, torch.Tensor) else v) for k, v in aux.items()},
                     trace_start_time,
                     trace_end_time,
                     self.lr_scheduler.get_last_lr()[0],

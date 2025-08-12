@@ -360,7 +360,7 @@ class BaseTrainer:
             def step_closure(
                 epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
             ):
-                self.atoms_seen += aux["atom_count"].detach().item()
+                # self.atoms_seen += aux["atom_count"].detach().item()
 
                 loss = loss.detach().item()
                 grad_norm = grad_norm.detach().item()
@@ -387,7 +387,7 @@ class BaseTrainer:
                 to_wandb["lr"] = lr
                 to_wandb["epoch"] = epoch
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
-                to_wandb["atoms_seen"] = self.atoms_seen
+                # to_wandb["atoms_seen"] = self.atoms_seen
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb)
@@ -400,14 +400,14 @@ class BaseTrainer:
                 args=(
                     epoch,
                     step,
-                    loss,
-                    grad_norm,
-                    aux,
+                    loss.detach(),
+                    grad_norm.detach(),
+                    {k: (v.detach() if isinstance(v, torch.Tensor) else v) for k, v in aux.items()},
                     trace_start_time,
                     trace_end_time,
                     self.lr_scheduler.get_last_lr()[0],
                 ),
-                run_async=False,
+                run_async=True,
             )
         
             xm.mark_step()

@@ -107,7 +107,7 @@ class ZRMTrainer(BaseTrainer):
                 (self.config.trainer.lm_loss_threshold_upper - self.config.trainer.lm_loss_threshold_lower)
             ),
             0.0, 1.0
-        )
+        ).detach()
         aux['dec_grad_scale'] = dec_grad_scale['value']
 
         # true kl

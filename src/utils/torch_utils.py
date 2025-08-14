@@ -3,23 +3,21 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-# class _ScaleGradient(torch.autograd.Function):
+class _ScaleGradient(torch.autograd.Function):
 
-#     @staticmethod
-#     def forward(ctx, x, scale):
-#         ctx.scale = scale
-#         return x.clone()
+    @staticmethod
+    def forward(ctx, x, scale):
+        ctx.scale = scale
+        return x.clone()
     
-#     @staticmethod
-#     def backward(ctx, grad_output):
-#         return grad_output * ctx.scale, None
-
-# def scale_gradient(x, scale):
-#     return _ScaleGradient.apply(x, scale)
-
+    @staticmethod
+    def backward(ctx, grad_output):
+        if isinstance(ctx.scale, dict):
+            return grad_output * ctx.scale['value'], None
+        return grad_output * ctx.scale, None
 
 def scale_gradient(x, scale):
-    return x.detach() + (x - x.detach()) * scale
+    return _ScaleGradient.apply(x, scale)
 
 
 def unsqueeze_to_batch(x, target):

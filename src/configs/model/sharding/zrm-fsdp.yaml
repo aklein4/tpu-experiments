@@ -82,8 +82,7 @@ decoder_output_emb: [null, fsdp]
 
 # projections
 encoder_noise_proj_in.weight: [fsdp, null]
-encoder_base_mu_proj_out.weight: [null, fsdp]
-encoder_extra_mu_proj_out.weight: [null, fsdp]
+encoder_mu_proj_out.weight: [null, fsdp]
 
 generator_z_proj_in.weight: [fsdp, null]
 generator_mu_proj_out.weight: [null, fsdp]

@@ -40,18 +40,11 @@ max_grad_value: null
 init_threshold_step: 0
 init_activated: false
 
-alpha_scale: 3.0
-
 gen_grad_wait: 0
 gen_grad_warmup: 2000
 
-alpha_wait: 2000
-alpha_warmup: 10000
-
-acc_threshold: 0.75
-
-loss_threshold_lower: 0.50
-loss_threshold_upper: 0.75
+lm_loss_threshold_upper: 1.05
+lm_loss_threshold_lower: 0.95
 
 kl_weight: 0.2
 

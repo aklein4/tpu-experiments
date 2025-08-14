@@ -253,27 +253,27 @@ class ZRMModel(nn.Module):
 
         # input embeddings
         self.encoder_input_emb = nn.Parameter(
-            torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
         self.encoder_sep_emb = nn.Parameter(
             torch.randn(self.hidden_size) / self.lr_scaler
         )
         self.encoder_output_emb = nn.Parameter(
-            torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
         self.encoder_z_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
         )
 
         self.generator_input_emb = nn.Parameter(
-            torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
         self.generator_z_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
         )
 
         self.decoder_input_emb = nn.Parameter(
-            torch.randn(1, self.hidden_size) / self.lr_scaler
+            torch.zeros(1, self.hidden_size) / self.lr_scaler
         )
         self.decoder_z_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size) / self.lr_scaler
@@ -289,10 +289,7 @@ class ZRMModel(nn.Module):
         self.encoder_noise_proj_in = nn.Linear(
             self.z_size, self.hidden_size, bias=False
         )
-        self.encoder_base_mu_proj_out = nn.Linear(
-            self.hidden_size, self.z_size, bias=False
-        )
-        self.encoder_extra_mu_proj_out = nn.Linear(
+        self.encoder_mu_proj_out = nn.Linear(
             self.hidden_size, self.z_size, bias=False
         )
 
@@ -329,8 +326,8 @@ class ZRMModel(nn.Module):
         self,
         input_ids: torch.LongTensor,
         output_ids: torch.LongTensor,
-        alpha: float = 0.0,
         gen_grad_scale: float = 1.0,
+        dec_grad_scale: float = 1.0,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         assert input_ids.shape[-1] == self.input_length
         assert output_ids.shape[-1] == self.output_length
@@ -352,7 +349,7 @@ class ZRMModel(nn.Module):
         )
 
         # run the encoder
-        encoder_mu_base, encoder_mu_extra = self.encode(
+        encoder_mu = self.encode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             input_mask=input_mask,
@@ -361,14 +358,7 @@ class ZRMModel(nn.Module):
             output_bias=output_bias,
             noise=noise,
         )
-        encoder_mu_extra = F.rms_norm(
-            encoder_mu_extra, [self.z_size], eps=self.config.rms_norm_eps
-        )
-        encoder_mu_base = encoder_mu_base * self.mu_scale
-        encoder_mu = (
-            encoder_mu_base +
-            alpha * encoder_mu_extra
-        )
+        encoder_mu = encoder_mu * self.mu_scale
 
         # run the generator
         enc_mu_for_generator = scale_gradient(
@@ -383,6 +373,9 @@ class ZRMModel(nn.Module):
         generator_mu = generator_mu * self.mu_scale
 
         # run the decoder   
+        enc_mu_for_decoder = scale_gradient(
+            encoder_mu, dec_grad_scale
+        )
         output_logits = self.decode(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
@@ -390,15 +383,13 @@ class ZRMModel(nn.Module):
             output_mask=output_mask,
             input_bias=input_bias,
             output_bias=output_bias,
-            z=(encoder_mu + noise)
+            z=(enc_mu_for_decoder + noise)
         )
 
         return {
             "output_logits": output_logits,
             "encoder_mu": encoder_mu,
             "generator_mu": generator_mu,
-            "encoder_mu_base": encoder_mu_base,
-            "encoder_mu_extra": encoder_mu_extra,
         }
     
 
@@ -483,14 +474,11 @@ class ZRMModel(nn.Module):
         )
         
         # get the mu values
-        mu_base = self.encoder_base_mu_proj_out(
-            encoder_states[:, -self.z_length:]
-        )
-        mu_extra = self.encoder_extra_mu_proj_out(
+        mu = self.encoder_mu_proj_out(
             encoder_states[:, -self.z_length:]
         )
 
-        return mu_base, mu_extra
+        return mu
 
 
     def generate(

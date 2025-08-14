@@ -52,6 +52,7 @@ class ZRMTrainer(BaseTrainer):
 
     model: ZRMModel
 
+
     def forward(self, batch):
         pad_token_id = self.model.config.pad_token_id
         labels = batch['output_ids']
@@ -61,18 +62,16 @@ class ZRMTrainer(BaseTrainer):
         if not hasattr(self, 'activated'):
             self.activated = torch.zeros_like(self.threshold_step.bool()).any() | self.config.trainer.init_activated
 
-        alpha = cosine_schedule(
-            self.threshold_step, self.config.trainer.alpha_wait, self.config.trainer.alpha_warmup, up=False
-        ) * np.sqrt(2 * self.config.trainer.alpha_scale * (self.model.output_length/self.model.z_length) / self.model.z_size)
         gen_grad_scale = cosine_schedule(
             self.threshold_step, self.config.trainer.gen_grad_wait, self.config.trainer.gen_grad_warmup, up=True
         )
+        dec_grad_scale = {}
 
         out = self.model(
             input_ids=batch['input_ids'],
             output_ids=batch['output_ids'],
-            alpha=alpha,
             gen_grad_scale=gen_grad_scale,
+            dec_grad_scale=dec_grad_scale,
         )
 
         # handle LM
@@ -82,25 +81,34 @@ class ZRMTrainer(BaseTrainer):
             ignore_index=pad_token_id,
             shift_labels=False,
             shift_logits=False,
-            loss_threshold_lower=self.config.trainer.loss_threshold_lower,
-            loss_threshold_upper=self.config.trainer.loss_threshold_upper
+            loss_threshold_lower=None,
+            loss_threshold_upper=None
         )
+
         self.activated = (
-            self.activated | (lm_losses['acc'] >= self.config.trainer.acc_threshold).any()
+            self.activated | (lm_losses['loss'] <= self.config.trainer.lm_loss_threshold_upper).any()
         )
         self.threshold_step += self.activated.long().sum()
+
         aux = {
             'lm_loss': lm_losses['loss'],
             'acc': lm_losses['acc'],
             'pcorr': lm_losses['pcorr'],
             'loss_threshold_perc': lm_losses['loss_threshold_perc'],
-        
-            'alpha': alpha,
             'gen_grad_scale': gen_grad_scale,
 
             'threshold_step': self.threshold_step,
             'activated': self.activated.long(),
         }
+
+        dec_grad_scale['value'] = torch.clip(
+            (
+                (lm_losses['loss'] - self.config.trainer.lm_loss_threshold_lower) /
+                (self.config.trainer.lm_loss_threshold_upper - self.config.trainer.lm_loss_threshold_lower)
+            ),
+            0.0, 1.0
+        )
+        aux['dec_grad_scale'] = dec_grad_scale['value']
 
         # true kl
         kl_true = kl_div(
@@ -114,7 +122,7 @@ class ZRMTrainer(BaseTrainer):
 
         # base kl
         kl_base = kl_div(
-            scale_gradient(out['encoder_mu_base'], gen_grad_scale),
+            scale_gradient(out['encoder_mu'], gen_grad_scale),
             out['generator_mu']
         )
         w_kl = get_w_kl(kl_base)
@@ -125,28 +133,14 @@ class ZRMTrainer(BaseTrainer):
         
         # mean kls
         kl_base_mean = kl_div(
-            out['encoder_mu_base'], out['encoder_mu_base'].mean(dim=0, keepdim=True)
+            out['encoder_mu'], out['encoder_mu'].mean(dim=0, keepdim=True)
         )
         aux["mean_base_kl_per_token"] = per_token(kl_base_mean, labels, pad_token_id)
         aux["mean_base_kl_parties"] = effective_parties(kl_base_mean.mean(0))
         
-        kl_extra_mean = kl_div(
-            out['encoder_mu_extra'] * alpha,
-            out['encoder_mu_extra'].mean(dim=0, keepdim=True) * alpha
-        )
-        aux["mean_extra_kl_per_token"] = per_token(kl_extra_mean, labels, pad_token_id)
-        aux["mean_extra_kl_parties"] = effective_parties(kl_extra_mean.mean(0))
-
-        kl_true_mean = kl_div(
-            out['encoder_mu'], out['encoder_mu'].mean(dim=0, keepdim=True)
-        )
-        aux["mean_true_kl_per_token"] = per_token(kl_true_mean, labels, pad_token_id)
-        aux["mean_true_kl_parties"] = effective_parties(kl_true_mean.mean(0))
-
         # the loss
         loss = (
             aux['lm_loss'] +
-            # aux['input_lm_loss'] +
             self.config.trainer.kl_weight * aux['base_kl_per_token']
         )
 

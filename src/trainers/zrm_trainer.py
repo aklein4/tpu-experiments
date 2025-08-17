@@ -52,7 +52,7 @@ class _ExplainGradient(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, x, noise, aux):
-        ctx.save_for_backward((noise,))
+        ctx.save_for_backward(noise,)
         ctx.aux = aux
 
         return x.clone()

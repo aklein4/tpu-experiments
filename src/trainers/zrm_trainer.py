@@ -48,6 +48,55 @@ def cosine_schedule(
     return 0.5 * (1 + torch.cos(np.pi * t))
 
 
+class _ExplainGradient(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx, x, noise, aux):
+        ctx.save_for_backward((noise,))
+        ctx.aux = aux
+
+        return x.clone()
+
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        noise, = ctx.saved_tensors
+        aux = ctx.aux
+
+        output_og = grad_output.clone()
+
+        mu_grad, var_grad = grad_output.mean(0), grad_output.var(0)
+        mu_noise, var_noise = noise.mean(0), noise.var(0)
+
+        m = torch.mean(
+            (noise - mu_noise[None]) * (grad_output - mu_grad[None]),
+            dim=0
+        ) / var_noise
+        b = mu_grad - m * mu_noise
+
+        pred_grad = m[None] * noise + b[None]
+
+        aux["R2"] += 1 - (
+            (grad_output - pred_grad).pow(2).mean(0) /
+            (grad_output - mu_grad[None]).pow(2).mean(0)
+        ).detach()
+
+        return output_og, None, None
+
+
+class GradientExplainer(torch.nn.Module):
+
+    def __init__(self):
+        super().__init__()
+        self.aux = {}
+
+
+    def forward(self, x, noise):
+        self.aux["R2"] = torch.zeros_like(x.mean())
+
+        return _ExplainGradient.apply(x, noise.detach(), self.aux)
+
+
 class ZRMTrainer(BaseTrainer):
 
     model: ZRMModel
@@ -67,11 +116,14 @@ class ZRMTrainer(BaseTrainer):
         )
         dec_grad_scale = {}
 
+        explainer = GradientExplainer()
+
         out = self.model(
             input_ids=batch['input_ids'],
             output_ids=batch['output_ids'],
             gen_grad_scale=gen_grad_scale,
             dec_grad_scale=dec_grad_scale,
+            gradient_explainer=explainer
         )
 
         # handle LM
@@ -82,7 +134,7 @@ class ZRMTrainer(BaseTrainer):
             shift_labels=False,
             shift_logits=False,
             loss_threshold_lower=None,
-            loss_threshold_upper=None
+            loss_threshold_upper=None,
         )
 
         self.activated = (
@@ -99,6 +151,8 @@ class ZRMTrainer(BaseTrainer):
 
             'threshold_step': self.threshold_step,
             'activated': self.activated.long(),
+
+            'grad_R2': explainer.aux["R2"],
         }
 
         dec_grad_scale['value'] = torch.clip(

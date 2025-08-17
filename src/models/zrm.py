@@ -328,6 +328,7 @@ class ZRMModel(nn.Module):
         output_ids: torch.LongTensor,
         gen_grad_scale: float = 1.0,
         dec_grad_scale: float = 1.0,
+        gradient_explainer = None,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         assert input_ids.shape[-1] == self.input_length
         assert output_ids.shape[-1] == self.output_length
@@ -360,9 +361,14 @@ class ZRMModel(nn.Module):
         )
         encoder_mu = encoder_mu * self.mu_scale
 
+        if gradient_explainer is not None:
+            encoder_mu_for_in = gradient_explainer(encoder_mu, noise)
+        else:
+            encoder_mu_for_in = encoder_mu
+
         # run the generator
         enc_mu_for_generator = scale_gradient(
-            encoder_mu, gen_grad_scale
+            encoder_mu_for_in, gen_grad_scale
         )
         generator_mu = self.generate(
             input_tokens=input_tokens,
@@ -374,7 +380,7 @@ class ZRMModel(nn.Module):
 
         # run the decoder   
         enc_mu_for_decoder = scale_gradient(
-            encoder_mu, dec_grad_scale
+            encoder_mu_for_in, dec_grad_scale
         )
         output_logits = self.decode(
             input_tokens=input_tokens,

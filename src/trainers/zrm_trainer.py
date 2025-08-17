@@ -76,9 +76,11 @@ class _ExplainGradient(torch.autograd.Function):
 
         pred_grad = m[None] * noise + b[None]
 
-        aux["R2"] += 1 - (
-            (grad_output - pred_grad).pow(2).mean(0) /
-            (grad_output - mu_grad[None]).pow(2).mean(0)
+        aux["R2"] += torch.mean(
+                1 - (
+                (grad_output - pred_grad).pow(2).mean(0) /
+                (grad_output - mu_grad[None]).pow(2).mean(0)
+            ).detach()
         ).detach()
 
         return output_og, None, None

@@ -8,6 +8,7 @@ class BaseHandler:
     split = None
 
     kind = None
+    default_format = None
 
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
@@ -15,15 +16,60 @@ class BaseHandler:
     
 
     def load_dataset(self):
-        if self.subset is not None:
-            return datasets.load_dataset(self.url, self.subset, split=self.split)
-        return datasets.load_dataset(self.url, split=self.split)
+        if self.subset is not None and self.split is not None:
+            assert not (isinstance(self.subset, list) and isinstance(self.split, list)), "Cannot have both subset and split as lists."
+
+        if self.subset is not None and isinstance(self.subset, list):
+
+            subs = [
+                datasets.load_dataset(self.url, sub, split=self.split)
+                for sub in self.subset
+            ]
+            
+            common_columns = set.intersection(*[set(ds.column_names) for ds in subs])
+            subs = [
+                ds.remove_columns(
+                    [col for col in ds.column_names if col not in common_columns]
+                )
+                for ds in subs
+            ]
+
+            return datasets.concatenate_datasets(subs)
+
+        if self.split is not None and isinstance(self.split, list):
+
+            splits = [
+                datasets.load_dataset(self.url, self.subset, split=s)
+                for s in self.split
+            ]
+
+            common_columns = set.intersection(*[set(ds.column_names) for ds in splits])
+            splits = [
+                ds.remove_columns(
+                    [col for col in ds.column_names if col not in common_columns]
+                )
+                for ds in splits
+            ]
+
+            return datasets.concatenate_datasets(splits)
+
+        return datasets.load_dataset(self.url, self.subset, split=self.split)
+
+
+    def name(self):
+        return f"{self.url}/{self.subset}" if self.subset is not None else self.url
 
 
     def full_map(self, example):
-        inp, out, form = self.map(example)
+        m = self.map(example)
+        if len(m) == 3:
+            inp, out, form = m
+        else:
+            inp, out = m
+            form = self.default_format
+
         return {
-            "source": f"{self.url}/{self.subset}" if self.subset is not None else self.url,
+            "source": self.name(),
             "kind": self.kind,
             "format": form,
             "input": inp,

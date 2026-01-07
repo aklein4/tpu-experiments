@@ -51,7 +51,10 @@ def main():
                 split="train",
             )
 
-        except:
+        except Exception as e:
+            if isinstance(e, KeyboardInterrupt):
+                raise e
+
             with open(LOG_FILE, "a") as f:
                 f.write(f"\n{h.name()}: FAIL")
             continue

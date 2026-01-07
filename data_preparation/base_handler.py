@@ -57,7 +57,13 @@ class BaseHandler:
 
 
     def name(self):
-        return f"{self.url}/{self.subset}" if self.subset is not None else self.url
+        if self.subset is not None and isinstance(self.subset, str):
+            return f"{self.url}/{self.subset}"        
+
+        if self.split is not None and isinstance(self.split, str) and self.split != "train":
+            return f"{self.url}/{self.split}"
+
+        return self.url
 
 
     def full_map(self, example):

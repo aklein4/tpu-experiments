@@ -489,9 +489,10 @@ class OpenCodeReasoningHandler(BaseHandler):
     default_format = "chat"
 
     def map(self, example):
+        sol = example["solution"].strip()
         return format_chat_paired(
             example["input"],
-            f"'''python\n{example["solution"]}\n'''"
+            f"'''python\n{sol}\n'''"
         )
                 
     def filter(self, example):
@@ -526,9 +527,12 @@ class NemotronMathProofsHandler(BaseHandler):
             "",
         ])
 
+        head = example["lean_header"].strip()
+        statement = example["formal_statement"].strip()
+
         return format_chat_paired(
             example["problem"],
-            f"'''lean\n{example["lean_header"]}\n\n{example["formal_statement"]}\n'''",
+            f"'''lean\n{head}\n\n{statement}\n'''",
             system=system,
         )
                 

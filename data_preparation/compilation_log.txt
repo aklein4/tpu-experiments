@@ -1,0 +1,17 @@
+
+TIGER-Lab/WebInstructSub: SUCCESS (2335207 examples)
+HuggingFaceTB/smoltalk/all: SUCCESS (1039991 examples)
+HuggingFaceTB/smoltalk2/SFT: FAIL
+allenai/sciq: FAIL
+nvidia/OpenScienceReasoning-2: FAIL
+nvidia/OpenScience/['OS-Q2.5-32B-10', 'OS-Q2.5-32B-4', 'OS-Q2.5-72B-10', 'OS-Q3-235B-4']: FAIL
+nvidia/OpenCodeReasoning/split_0: FAIL
+nvidia/Nemotron-Post-Training-Dataset-v2: FAIL
+nvidia/Nemotron-Math-Proofs-v1: FAIL
+nvidia/Nemotron-Instruction-Following-Chat-v1: FAIL
+facebook/natural_reasoning: FAIL
+nvidia/Llama-Nemotron-Post-Training-Dataset/SFT: FAIL
+teknium/OpenHermes-2.5: FAIL
+nvidia/AceReason-1.1-SFT: FAIL
+
+Total examples: 3375198

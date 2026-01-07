@@ -1,10 +1,8 @@
 {
-  "add_bos_token": true,
-  "add_eos_token": true,
-  "add_prefix_space": null,
+  "add_prefix_space": false,
   "added_tokens_decoder": {
     "0": {
-      "content": "<unk>",
+      "content": "<|endoftext|>",
       "lstrip": false,
       "normalized": false,
       "rstrip": false,
@@ -12,7 +10,7 @@
       "special": true
     },
     "1": {
-      "content": "<s>",
+      "content": "<|im_start|>",
       "lstrip": false,
       "normalized": false,
       "rstrip": false,
@@ -20,15 +18,127 @@
       "special": true
     },
     "2": {
-      "content": "</s>",
+      "content": "<|im_end|>",
       "lstrip": false,
       "normalized": false,
       "rstrip": false,
       "single_word": false,
       "special": true
     },
-    "32000": {
-      "content": "<pad>",
+    "3": {
+      "content": "<repo_name>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "4": {
+      "content": "<reponame>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "5": {
+      "content": "<file_sep>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "6": {
+      "content": "<filename>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "7": {
+      "content": "<gh_stars>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "8": {
+      "content": "<issue_start>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "9": {
+      "content": "<issue_comment>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "10": {
+      "content": "<issue_closed>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "11": {
+      "content": "<jupyter_start>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "12": {
+      "content": "<jupyter_text>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "13": {
+      "content": "<jupyter_code>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "14": {
+      "content": "<jupyter_output>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "15": {
+      "content": "<jupyter_script>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "16": {
+      "content": "<empty_output>",
+      "lstrip": false,
+      "normalized": false,
+      "rstrip": false,
+      "single_word": false,
+      "special": true
+    },
+    "49152": {
+      "content": "<|pad|>",
       "lstrip": false,
       "normalized": false,
       "rstrip": false,
@@ -36,16 +146,32 @@
       "special": true
     }
   },
-  "bos_token": "<s>",
+  "additional_special_tokens": [
+    "<|endoftext|>",
+    "<|im_start|>",
+    "<|im_end|>",
+    "<repo_name>",
+    "<reponame>",
+    "<file_sep>",
+    "<filename>",
+    "<gh_stars>",
+    "<issue_start>",
+    "<issue_comment>",
+    "<issue_closed>",
+    "<jupyter_start>",
+    "<jupyter_text>",
+    "<jupyter_code>",
+    "<jupyter_output>",
+    "<jupyter_script>",
+    "<empty_output>"
+  ],
+  "bos_token": "<|endoftext|>",
   "clean_up_tokenization_spaces": false,
-  "eos_token": "</s>",
+  "eos_token": "<|endoftext|>",
   "extra_special_tokens": {},
-  "legacy": false,
-  "model_max_length": 1000000000000000019884624838656,
-  "pad_token": "<pad>",
-  "padding_side": "right",
-  "sp_model_kwargs": {},
-  "tokenizer_class": "LlamaTokenizerFast",
-  "unk_token": "<unk>",
-  "use_default_system_prompt": false
+  "model_max_length": 8192,
+  "pad_token": "<|pad|>",
+  "tokenizer_class": "GPT2Tokenizer",
+  "unk_token": "<|endoftext|>",
+  "vocab_size": 49152
 }

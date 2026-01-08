@@ -11,12 +11,13 @@
  - [x] microsoft/orca-agentinstruct-1M-v1
  - [ ] IgnoraZ/SynthQuestions -> synthquestions, realquestions # problem with jsonl formatting
  - [x] TIGER-Lab/WebInstructSub
- - [ ] PleIAs/SYNTH
+ - [ ] PleIAs/SYNTH # massive
  - [x] nvidia/Nemotron-Instruction-Following-Chat-v1
  
 ### Reasoning
  - [x] facebook/natural_reasoning + instruction
  - [x] nvidia/AceReason-1.1-SFT
+ - [x] nvidia/AceMath-Instruct-Training-Data
 
 ### MCQA
  - [x] nvidia/OpenScience
@@ -25,16 +26,15 @@
  - [x] allenai/sciq
 
 ### Math
- - [ ] math-ai/StackMathQA -> stackmathqafull-1q1a + instruction
- - [ ] meta-math/MetaMathQA + instruction + bench-format
- - [ ] TIGER-Lab/MATH-plus + instruction + bench-format
- - [ ] nvidia/OpenMathReasoning
- - [ ] nvidia/AceMath-Instruct-Training-Data
- - [ ] nvidia/OpenMathInstruct-1
- - [ ] nvidia/OpenMathInstruct-2
- - [ ] nvidia/Nemotron-PrismMath
- - [ ] OpenDataArena/ODA-Math-460k
- - [ ] OpenDataArena/MathLake
+ - [x] math-ai/StackMathQA -> stackmathqa800k
+ - [x] meta-math/MetaMathQA + instruction + bench-format
+ - [x] TIGER-Lab/MATH-plus + instruction + bench-format
+ - [ ] nvidia/OpenMathReasoning # not all correct?
+ - [x] nvidia/OpenMathInstruct-1
+ - [x] nvidia/OpenMathInstruct-2
+ - [x] nvidia/Nemotron-PrismMath
+ - [x] OpenDataArena/ODA-Math-460k
+ - [ ] OpenDataArena/MathLake # big and hard to check contents
 
 ### Code
  - [x] nvidia/OpenCodeReasoning

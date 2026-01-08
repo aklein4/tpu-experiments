@@ -9,11 +9,9 @@ LOG_FILE = "compilation_log.txt"
 MAX_INPUT_CHARACTERS = 1000 * 10
 MAX_OUTPUT_CHARACTERS = 1000 * 10
 
-NAMES_TO_DO = [
-    "Goedel-LM/Goedel-Pset-v1",
-]
+NAMES_TO_DO = None
 
-DEBUG = True
+DEBUG = False
 
 
 def main():
@@ -25,6 +23,12 @@ def main():
 
     handler_list = HANDLERS
     if NAMES_TO_DO is not None:
+
+        names = [h().name() for h in handler_list]
+        for name in NAMES_TO_DO:
+            if name not in names:
+                raise ValueError(f"Dataset name {name} not found in handlers.")
+
         handler_list = [
             h for h in handler_list if h().name() in NAMES_TO_DO
         ]

@@ -10,6 +10,8 @@ class BaseHandler:
     kind = None
     default_format = None
 
+    verification_mode = None
+
     def __init__(self, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -22,7 +24,7 @@ class BaseHandler:
         if self.subset is not None and isinstance(self.subset, list):
 
             subs = [
-                datasets.load_dataset(self.url, sub, split=self.split)
+                datasets.load_dataset(self.url, sub, split=self.split, verification_mode=self.verification_mode)
                 for sub in self.subset
             ]
             
@@ -39,7 +41,7 @@ class BaseHandler:
         if self.split is not None and isinstance(self.split, list):
 
             splits = [
-                datasets.load_dataset(self.url, self.subset, split=s)
+                datasets.load_dataset(self.url, self.subset, split=s, verification_mode=self.verification_mode)
                 for s in self.split
             ]
 
@@ -53,7 +55,7 @@ class BaseHandler:
 
             return datasets.concatenate_datasets(splits)
 
-        return datasets.load_dataset(self.url, self.subset, split=self.split)
+        return datasets.load_dataset(self.url, self.subset, split=self.split, verification_mode=self.verification_mode)
 
 
     def name(self):

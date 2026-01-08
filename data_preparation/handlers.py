@@ -355,6 +355,33 @@ class AceReasonHandler(BaseHandler):
         )
 
 
+class AceMathHandler(BaseHandler):
+
+    url = "nvidia/AceMath-Instruct-Training-Data"
+    subset = None
+    split = get_splits(
+        "nvidia/AceMath-Instruct-Training-Data",
+        None,
+    )
+
+    kind = "reasoning"
+    default_format = "chat"
+
+    verification_mode = datasets.VerificationMode.NO_CHECKS
+
+    def map(self, example):
+        return format_chat(
+            example["messages"] + [{"role": "assistant", "content": example["answer"]}]
+        )
+
+    def filter(self, example):
+        return length_filter(
+            example,
+            self.max_input_characters,
+            self.max_output_characters,
+        )
+
+
 """ ===== MCQA ===== """
 
 
@@ -480,6 +507,212 @@ class SciqHandler(BaseHandler):
 
 
 """ ===== Math ===== """
+
+
+def random_math_format(x, y, answer):
+    choice = random.choice(["cot", "no_cot", "none"])
+
+    if choice == "cot":
+        return format_cot(x, y, answer) + ("math_cot",)
+    elif choice == "no_cot":
+        return format_no_cot(x, y, answer) + ("math_no_cot",)
+    else:
+        return format_chat_paired(x, y)
+
+
+class StackMathHandler(BaseHandler):
+
+    url = "math-ai/StackMathQA"
+    subset = "stackmathqa800k"
+    split = "train"
+
+    kind = "math"
+    default_format = "chat"
+
+    def map(self, example):
+        return format_chat_paired(
+            example["Q"],
+            example["A"]
+        )    
+
+    def filter(self, example):
+        return length_filter(
+            example,
+            self.max_input_characters,
+            self.max_output_characters,
+        )
+
+
+class MetaMathHandler(BaseHandler):
+
+    url = "meta-math/MetaMathQA"
+    subset = None
+    split = "train"
+
+    kind = "math"
+    default_format = "chat"
+
+    def map(self, example):
+
+        if "The answer is:" not in example["response"]:
+            return format_chat_paired(
+                example["query"],
+                example["response"]
+            )
+        
+        answer = example["response"].split("The answer is:")[-1].strip()
+        
+        return random_math_format(
+            example["query"],
+            example["response"],
+            answer,
+        )        
+
+    def filter(self, example):
+        return length_filter(
+            example,
+            self.max_input_characters,
+            self.max_output_characters,
+        )
+
+
+class MathPlusHandler(BaseHandler):
+
+    url = "TIGER-Lab/MATH-plus"
+    subset = None
+    split = "train"
+
+    kind = "math"
+    default_format = "chat"
+
+    def map(self, example):
+
+        if "The answer is" not in example["output"]:
+            return format_chat_paired(
+                example["instruction"],
+                example["output"]
+            )
+        
+        answer = example["output"].split("The answer is")[-1].strip()
+        if len(answer) == 0:
+            return format_chat_paired(
+                example["instruction"],
+                example["output"]
+            )
+        
+        if answer[-1] == ".":
+            answer = answer[:-1]
+
+        return random_math_format(
+            example["instruction"],
+            example["output"],
+            answer,
+        )        
+
+    def filter(self, example):
+        return length_filter(
+            example,
+            self.max_input_characters,
+            self.max_output_characters,
+        )
+
+
+class OpenMathInstruct1Handler(BaseHandler):
+
+    url = "nvidia/OpenMathInstruct-1"
+    subset = None
+    split = "train"
+
+    kind = "math"
+    default_format = "chat"
+
+    def map(self, example):
+        if not example["is_correct"]:
+            return None, None
+
+        return random_math_format(
+            example["question"],
+            example["generated_solution"],
+            example["expected_answer"]
+        )        
+
+    def filter(self, example):
+        return length_filter(
+            example,
+            self.max_input_characters,
+            self.max_output_characters,
+        )
+
+
+class OpenMathInstruct2Handler(BaseHandler):
+
+    url = "nvidia/OpenMathInstruct-2"
+    subset = None
+    split = "train_2M" # use a smaller subset because idk how good the quality is
+
+    kind = "math"
+    default_format = "chat"
+
+    def map(self, example):
+        return random_math_format(
+            example["problem"],
+            example["generated_solution"],
+            example["expected_answer"]
+        )        
+
+    def filter(self, example):
+        return length_filter(
+            example,
+            self.max_input_characters,
+            self.max_output_characters,
+        )
+
+
+class PrismMathHandler(BaseHandler):
+
+    url = "nvidia/Nemotron-PrismMath"
+    subset = None
+    split = "train"
+
+    kind = "math"
+    default_format = "chat"
+
+    def map(self, example):
+        return format_chat_paired(
+            example["problem"],
+            example["solution"]
+        )        
+
+    def filter(self, example):
+        return length_filter(
+            example,
+            self.max_input_characters,
+            self.max_output_characters,
+        )
+
+
+class ODAMathHandler(BaseHandler):
+
+    url = "OpenDataArena/ODA-Math-460k"
+    subset = None
+    split = "train"
+
+    kind = "math"
+    default_format = "chat"
+
+    def map(self, example):
+        return random_math_format(
+            example["question"],
+            example["response"],
+            example["expected_answer"],
+        )        
+
+    def filter(self, example):
+        return length_filter(
+            example,
+            self.max_input_characters,
+            self.max_output_characters,
+        )
 
 
 """ ===== Code ===== """

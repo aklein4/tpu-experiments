@@ -1,4 +1,6 @@
 
-Goedel-LM/Goedel-Pset-v1: SUCCESS (1732590 examples)
+nvidia/OpenMathInstruct-2/train_2M: SUCCESS (1999983 examples)
+TIGER-Lab/MATH-plus: SUCCESS (893929 examples)
+nvidia/AceMath-Instruct-Training-Data: SUCCESS (5451579 examples)
 
-Total examples: 1732590
+Total examples: 8345491

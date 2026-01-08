@@ -58,6 +58,9 @@ def format_chat(data):
 
 
 def format_chat_paired(x, y, system=None):
+    if x is None or y is None:
+        return None, None
+
     messages = [
         {"role": "user", "content": x},
         {"role": "assistant", "content": y},
@@ -425,7 +428,7 @@ class OpenScienceReasoningHandler(BaseHandler):
         return random_mcqa_format(
             example["input"],
             example["output"],
-            example["answer"],
+            example["expected_answer"],
         )
                 
     def filter(self, example):
@@ -476,7 +479,10 @@ class SciqHandler(BaseHandler):
         )
 
 
-""" === Code === """
+""" ===== Math ===== """
+
+
+""" ===== Code ===== """
 
 
 class OpenCodeReasoningHandler(BaseHandler):
@@ -492,7 +498,7 @@ class OpenCodeReasoningHandler(BaseHandler):
         sol = example["solution"].strip()
         return format_chat_paired(
             example["input"],
-            f"'''python\n{sol}\n'''"
+            f"```python\n{sol}\n```"
         )
                 
     def filter(self, example):
@@ -501,6 +507,20 @@ class OpenCodeReasoningHandler(BaseHandler):
             self.max_input_characters,
             self.max_output_characters,
         )
+
+
+LEAN_PROMPTS = [
+    "Use Lean to formally prove the following statement.",
+    "Use Lean to formally prove the following statement.",
+    "Construct a formal proof in Lean for the following mathematical claim.",
+    "Develop a rigorous proof in Lean for the stated mathematical proposition.",
+    "Write the proof of the following mathematical statement in Lean.",
+    "Demonstrate the proof of the given mathematical assertion using Lean.",
+    "Formulate a detailed proof in Lean for the following mathematical claim.",
+    "Using Lean, provide a formal proof for the stated mathematical proposition.",
+    "",
+    "",
+]
 
 
 class NemotronMathProofsHandler(BaseHandler):
@@ -514,25 +534,70 @@ class NemotronMathProofsHandler(BaseHandler):
 
     def map(self, example):
 
-        system = random.choice([
-            "Use Lean to formally prove the following statement.",
-            "Use Lean to formally prove the following statement.",
-            "Construct a formal proof in Lean for the following mathematical claim.",
-            "Develop a rigorous proof in Lean for the stated mathematical proposition.",
-            "Write the proof of the following mathematical statement in Lean.",
-            "Demonstrate the proof of the given mathematical assertion using Lean.",
-            "Formulate a detailed proof in Lean for the following mathematical claim.",
-            "Using Lean, provide a formal proof for the stated mathematical proposition.",
-            "",
-            "",
-        ])
+        system = random.choice(LEAN_PROMPTS)
 
-        head = example["lean_header"].strip()
-        statement = example["formal_statement"].strip()
+        head = example["lean_header"].strip()+"\n\n" if example["lean_header"] is not None else ""
+        statement = example["formal_statement"].strip() if example["formal_statement"] is not None else None
 
         return format_chat_paired(
             example["problem"],
-            f"'''lean\n{head}\n\n{statement}\n'''",
+            f"```lean\n{head}{statement}\n```" if statement is not None else None,
+            system=system,
+        )
+                
+    def filter(self, example):
+        return length_filter(
+            example,
+            self.max_input_characters,
+            self.max_output_characters,
+        )
+
+
+class TinyCodesHandler(BaseHandler):
+
+    url = "nampdn-ai/tiny-codes"
+    subset = None
+    split = "train"
+
+    kind = "code"
+    default_format = "chat"
+
+    def map(self, example):
+        if "```" not in example["response"]:
+            return None, None
+
+        code = "```" + example["response"].split("```")[1].strip() + "\n```"
+
+        return format_chat_paired(
+            example["prompt"],
+            code
+        )
+                
+    def filter(self, example):
+        return length_filter(
+            example,
+            self.max_input_characters,
+            self.max_output_characters,
+        )
+
+
+class GoedelHandler(BaseHandler):
+
+    url = "Goedel-LM/Goedel-Pset-v1"
+    subset = None
+    split = "train"
+
+    kind = "code"
+    default_format = "chat"
+
+    def map(self, example):
+
+        statement = example["formal_statement"].strip()
+        system = random.choice(LEAN_PROMPTS)
+
+        return format_chat_paired(
+            example["informal_statement"],
+            f"```lean\n{statement}\n```",
             system=system,
         )
                 

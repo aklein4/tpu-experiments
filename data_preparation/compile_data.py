@@ -9,7 +9,11 @@ LOG_FILE = "compilation_log.txt"
 MAX_INPUT_CHARACTERS = 1000 * 10
 MAX_OUTPUT_CHARACTERS = 1000 * 10
 
-NAMES_TO_DO = None
+NAMES_TO_DO = [
+    "Goedel-LM/Goedel-Pset-v1",
+]
+
+DEBUG = True
 
 
 def main():
@@ -34,7 +38,7 @@ def main():
         )
 
         print("")
-        print(f"[{i+1}/{len(HANDLERS)}] Processing dataset: {h.name()}")
+        print(f"[{i+1}/{len(handler_list)}] Processing dataset: {h.name()}")
         print("")
 
         try:
@@ -52,7 +56,7 @@ def main():
             )
 
         except Exception as e:
-            if isinstance(e, KeyboardInterrupt):
+            if isinstance(e, KeyboardInterrupt) or DEBUG:
                 raise e
 
             with open(LOG_FILE, "a") as f:

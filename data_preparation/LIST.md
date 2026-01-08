@@ -41,9 +41,12 @@
  - [ ] nvidia/OpenCodeReasoning-2 # no questions
  - [x] nvidia/Nemotron-Math-Proofs-v1
  - [ ] nvidia/Nemotron-Competitive-Programming-v1 # a lot of reasoning with no clear solution
+ - [x] nampdn-ai/tiny-codes
+ - [x] Goedel-LM/Goedel-Pset-v1
 
 ### Web Text
  - [ ] HuggingFaceFW/fineweb -> sample-10BT
  - [ ] HuggingFaceFW/fineweb-edu -> sample-10BT
  - [ ] HuggingFaceTB/finemath -> finemath-4plus
+ - [ ] EleutherAI/proof-pile-2 -> algebraic-stack
  

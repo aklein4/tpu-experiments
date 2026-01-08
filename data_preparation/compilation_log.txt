@@ -1,6 +1,5 @@
 
-nvidia/OpenMathInstruct-2/train_2M: SUCCESS (1999983 examples)
-TIGER-Lab/MATH-plus: SUCCESS (893929 examples)
-nvidia/AceMath-Instruct-Training-Data: SUCCESS (5451579 examples)
+[1/1] allenai--sciq: SUCCESS (11_679 examples, 1_854_693 tokens)
 
-Total examples: 8345491
+Total examples: 11_679
+Total tokens: 1_854_693

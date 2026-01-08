@@ -76,9 +76,9 @@ def format_no_cot(x, y, answer):
     y = remove_think(y)
     return format_chat(
         [
-            {"role": "system", "content": "Place the final answer to the following question inside of a \\boxed\{\} command. This must appear at the start of your response before any other text."},
+            {"role": "system", "content": "Place the final answer to the following question inside of a \\boxed{} command. This must appear at the start of your response before any other text."},
             {"role": "user", "content": x},
-            {"role": "assistant", "content": f"\\boxed{answer}\n{y}"},
+            {"role": "assistant", "content": "\\boxed{"+str(answer)+"}"+f"\n{y}"},
         ]
     )
 
@@ -87,9 +87,9 @@ def format_cot(x, y, answer):
     y = remove_think(y)
     return format_chat(
         [
-            {"role": "system", "content": "Place the final answer to the following question inside of a \\boxed\{\} command. This must appear after all other text at the end of your response."},
+            {"role": "system", "content": "Place the final answer to the following question inside of a \\boxed{} command. This must come at the end of your response, and no other text should come after it."},
             {"role": "user", "content": x},
-            {"role": "assistant", "content": f"{y}\nFinal answer: \\boxed{answer}"},
+            {"role": "assistant", "content": f"{y}\nFinal answer: \\boxed"+"{"+str(answer)+"}"},
         ]
     )
 

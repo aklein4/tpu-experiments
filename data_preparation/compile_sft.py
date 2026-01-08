@@ -64,15 +64,15 @@ def main():
                 raise e
 
             with open(LOG_FILE, "a") as f:
-                f.write(f"\n{h.name()}: FAIL")
+                f.write(f"\n[{i+1}/{len(handler_list)}] {h.name()}: FAIL")
             continue
 
         with open(LOG_FILE, "a") as f:
-            f.write(f"\n{h.name()}: SUCCESS ({len(ds)} examples)")
+            f.write(f"\n[{i+1}/{len(handler_list)}] {h.name()}: SUCCESS ({len(ds):_} examples)")
         total_examples += len(ds)
     
     with open(LOG_FILE, "a") as f:
-        f.write(f"\n\nTotal examples: {total_examples}\n")
+        f.write(f"\n\nTotal examples: {total_examples:_}\n")
 
 
 if __name__ == "__main__":

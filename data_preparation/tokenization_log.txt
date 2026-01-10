@@ -1,0 +1,28 @@
+
+[1/24] Goedel-LM--Goedel-Pset-v1: SUCCESS (1_713_342 examples, 655_042_216 tokens)
+[2/24] HuggingFaceTB--smoltalk--all: SUCCESS (1_017_983 examples, 416_153_291 tokens)
+[3/24] HuggingFaceTB--smoltalk2--SFT: SUCCESS (2_029_023 examples, 1_018_104_386 tokens)
+[4/24] OpenDataArena--ODA-Math-460k: SUCCESS (428_897 examples, 270_258_158 tokens)
+[5/24] TIGER-Lab--MATH-plus: SUCCESS (892_658 examples, 273_068_114 tokens)
+[6/24] TIGER-Lab--WebInstructSub: SUCCESS (2_326_217 examples, 827_618_325 tokens)
+[7/24] allenai--sciq: SUCCESS (11_679 examples, 1_854_681 tokens)
+[8/24] facebook--natural_reasoning: SUCCESS (938_735 examples, 731_579_519 tokens)
+[9/24] math-ai--StackMathQA--stackmathqa800k: SUCCESS (786_795 examples, 319_284_843 tokens)
+[10/24] meta-math--MetaMathQA: SUCCESS (394_467 examples, 111_197_964 tokens)
+[11/24] nampdn-ai--tiny-codes: SUCCESS (1_220_947 examples, 432_203_496 tokens)
+[12/24] nvidia--AceMath-Instruct-Training-Data: SUCCESS (4_817_460 examples, 2_772_455_816 tokens)
+[13/24] nvidia--AceReason-1.1-SFT: SUCCESS (3_449_148 examples, 2_463_704_415 tokens)
+[14/24] nvidia--Llama-Nemotron-Post-Training-Dataset--SFT: SUCCESS (32_318_170 examples, 15_868_270_202 tokens)
+[15/24] nvidia--Nemotron-Instruction-Following-Chat-v1--chat_if: SUCCESS (271_688 examples, 143_726_338 tokens)
+[16/24] nvidia--Nemotron-Math-Proofs-v1--lean: SUCCESS (1_349_203 examples, 425_602_935 tokens)
+[17/24] nvidia--Nemotron-Post-Training-Dataset-v2: SUCCESS (1_075_438 examples, 792_831_941 tokens)
+[18/24] nvidia--Nemotron-PrismMath: SUCCESS (980_820 examples, 583_229_484 tokens)
+[19/24] nvidia--OpenCodeReasoning--split_0: SUCCESS (520_074 examples, 426_387_080 tokens)
+[20/24] nvidia--OpenMathInstruct-1: SUCCESS (1_578_374 examples, 410_998_019 tokens)
+[21/24] nvidia--OpenMathInstruct-2--train_2M: SUCCESS (1_945_913 examples, 1_013_632_737 tokens)
+[22/24] nvidia--OpenScience: SUCCESS (6_122_647 examples, 3_189_367_806 tokens)
+[23/24] nvidia--OpenScienceReasoning-2: SUCCESS (1_558_864 examples, 980_087_692 tokens)
+[24/24] teknium--OpenHermes-2.5: SUCCESS (979_690 examples, 358_141_214 tokens)
+
+Total examples: 68_728_232
+Total tokens: 34_484_800_672

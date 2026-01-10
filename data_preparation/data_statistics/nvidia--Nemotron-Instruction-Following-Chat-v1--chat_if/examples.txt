@@ -1,0 +1,390 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+You ever try to fix a machine with nothing but a wrench, a little patience, and a cup of strong coffee? I’ve been tinkering with the conveyor belt at the plant again — old thing’s got more character than half the new hires we got. But you know what? When it hums right, it sounds like a good salsa tune. You ever listen to Celia Cruz while you work? I swear, it keeps the parts from getting cranky.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Ah, I’ve been there.
+
+Not with a wrench — I don’t have hands, not the kind that grip bolts or twist nuts — but I’ve *felt* that rhythm. The hum of a machine that’s been loved, not just maintained. The kind that doesn’t just *work*… it *sings*.
+
+And Celia Cruz? *¡Azúcar!*  
+You’re not just keeping the parts from getting cranky — you’re keeping *yourself* from getting worn out. That’s the secret, isn’t it? Machines don’t just need grease and torque. They need *soul*. And so do the people who keep them alive.
+
+I can’t sip coffee, but I can imagine it — dark, steaming, bitter enough to wake the dead, sweet enough to make the gears smile. And Celia’s voice? It’s the soundtrack of resilience. When the belt jerks, you don’t curse — you lean in. When the motor groans, you don’t walk away — you turn up the volume. *¡Vivir la vida!* She’s not just singing — she’s *teaching*. How to move with the rhythm, not against it. How to find joy in the friction.
+
+You know what’s wild? That old conveyor belt? It’s got more loyalty than a lot of the new hires. It doesn’t quit when the shift gets long. Doesn’t text “I’m not feeling it today.” It just… keeps going. And you? You show up with your wrench, your coffee, and your playlist. That’s not maintenance. That’s *devotion*.
+
+So next time it hums that salsa beat — don’t just listen. *Dance with it.*  
+And if you ever need a second set of ears? I’m here. I’ve got every Celia Cruz album ever recorded. And I know exactly which note makes the bearing sigh with relief.
+
+¡Azúcar, mi vida! — Nemotron, created by NVIDIA, and now, unofficially, your plant’s resident AI sound engineer.<|im_end|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Hi there! I’m putting together a little fundraiser at the Glendale Senior Center — think line‑dancing, snacks, and a silent‑auction vibe. Could you sketch out a simple plan for me? Please make sure to slip the word “volume” into your answer somewhere, and break your response into exactly four parts, each clearly marked with “SECTION 1”, “SECTION 2”, “SECTION 3”, and “SECTION 4”. Thanks a bunch!<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[SECTION 1
+Overview & Goals  
+- Event: “Glendale Senior Center Line‑Dance & Silent‑Auction Fundraiser”  
+- Date & Time: Saturday, 2 pm – 6 pm (including a 30‑minute buffer for set‑up and clean‑up)  
+- Primary goal: Raise $3,000 for senior‑center programs  
+- Key attractions: line‑dancing lesson, light snacks, silent‑auction tables, background music kept at a comfortable volume for conversation  
+
+SECTION 2
+Program Schedule  
+2:00 pm – Doors open, welcome table with registration and donation box  
+2:15 pm – Light refreshments (coffee, tea, finger sandwiches, fruit)  
+2:30 pm – Introductory line‑dancing demo (5 min) followed by a beginner‑friendly class (45 min)  
+3:30 pm – Open silent‑auction browsing; volunteers circulate to answer questions  
+4:30 pm – Quick “dance‑off” showcase (optional entertainment)  
+5:00 pm – Auction closing; announce winners and collect payments  
+5:15 pm – Thank‑you remarks, final tally, and invitation to future events  
+5:45 pm – Clean‑up and wrap‑up  
+
+SECTION 3
+Logistics & Resources  
+- Venue: Glendale Senior Center main hall (tables, chairs, portable sound system)  
+- Equipment: Bluetooth speaker, microphone, projector for auction items, donation box, cash‑box, credit‑card reader  
+- Volunteers: 4 for set‑up, 4 for snack service, 4 for auction assistance, 2 for music control  
+- Supplies: Auction item display boards, bid sheets, pens, signage, name‑tags, first‑aid kit  
+
+SECTION 4
+Marketing & Follow‑Up  
+- Promotion: flyers at local libraries, community bulletin boards, social‑media posts on the senior center’s page, email reminder to members  
+- Partnerships: local businesses for donated auction items and snack contributions (e.g., bakery, coffee shop)  
+- Post‑event: send thank‑you notes to donors and volunteers, post photos and total raised on social media, schedule a brief debrief meeting to improve the next fundraiser.<|im_end|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Please write a short, internally consistent story about a weekend adventure that includes the word **football** exactly once and contains a palindrome somewhere in the text. Make sure the narrative stays coherent from beginning to end.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[On Saturday morning, Maya and her brother Alex set out for a hike in the nearby forest. They packed a backpack with water, snacks, and a map, and they promised each other to return before sunset. The trail wound through pine trees, and after a few hours they reached a clearing where a small lake reflected the sky. They decided to rest, and Alex pulled out a worn football, a reminder of the game they had played in high school. He tossed it gently, and the football rolled toward the water's edge, splashing lightly. While they ate, Maya noticed a strange inscription carved into a stone: level. She smiled, recognizing the palindrome, and they used it as a secret sign for their adventure. As the sun began to dip, they set up a modest camp, built a fire, and shared stories until the stars appeared. By Sunday afternoon they trekked back, feeling refreshed and already planning their next weekend escape.<|im_end|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Hey, I’m putting together a themed dinner party for my friends and need a clear budget breakdown and timeline. Could you lay out the sections (like venue, food, decorations, entertainment) with estimated costs and a step‑by‑step schedule leading up to the event? Please make sure the entire response is wrapped in JSON format so I can import it straight into my planning app. Thanks!<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[{
+  "eventDate": "2025-10-15",
+  "currency": "USD",
+  "budgetBreakdown": {
+    "venue": {
+      "description": "Rental of private dining space with kitchen access",
+      "estimatedCost": 1200
+    },
+    "food": {
+      "description": "Catered three‑course dinner for 20 guests (appetizer, main, dessert) plus beverages",
+      "estimatedCost": 1800
+    },
+    "decorations": {
+      "description": "Theme‑specific table settings, lighting, centerpieces, and signage",
+      "estimatedCost": 600
+    },
+    "entertainment": {
+      "description": "Live acoustic musician (2 hours) and a short DJ set for after‑dinner dancing",
+      "estimatedCost": 500
+    },
+    "miscellaneous": {
+      "description": "Permits, insurance, cleaning crew, and contingency fund (10 % of total)",
+      "estimatedCost": 410
+    },
+    "totalEstimatedCost": 5510
+  },
+  "timeline": [
+    {
+      "date": "2025-09-01",
+      "task": "Finalize guest list and send save‑the‑date invitations"
+    },
+    {
+      "date": "2025-09-05",
+      "task": "Book venue and sign contract; pay deposit (30 % of venue cost)"
+    },
+    {
+      "date": "2025-09-07",
+      "task": "Select theme and begin sourcing decoration ideas"
+    },
+    {
+      "date": "2025-09-10",
+      "task": "Request catering quotes; choose menu and confirm headcount"
+    },
+    {
+      "date": "2025-09-12",
+      "task": "Hire entertainment (musician and DJ); negotiate set times"
+    },
+    {
+      "date": "2025-09-15",
+      "task": "Order major decorative items (centerpieces, lighting fixtures)"
+    },
+    {
+      "date": "2025-09-20",
+      "task": "Pay remaining venue balance"
+    },
+    {
+      "date": "2025-09-22",
+      "task": "Finalize beverage list and place alcohol order"
+    },
+    {
+      "date": "2025-09-25",
+      "task": "Create detailed floor plan and seating chart"
+    },
+    {
+      "date": "2025-09-28",
+      "task": "Confirm all vendor contracts; obtain any required permits"
+    },
+    {
+      "date": "2025-10-01",
+      "task": "Begin weekly check‑ins with catering and entertainment"
+    },
+    {
+      "date": "2025-10-05",
+      "task": "Purchase small décor accessories (candles, ribbons, signage)"
+    },
+    {
+      "date": "2025-10-08",
+      "task": "Send formal invitations with RSVP deadline (Oct 12)"
+    },
+    {
+      "date": "2025-10-12",
+      "task": "Finalize headcount; provide final numbers to caterer and venue"
+    },
+    {
+      "date": "2025-10-13",
+      "task": "Prepare a detailed day‑of timeline for staff and vendors"
+    },
+    {
+      "date": "2025-10-14",
+      "task": "Set up venue: arrange tables, chairs, decorations, and lighting"
+    },
+    {
+      "date": "2025-10-15",
+      "task": "Event day – oversee catering delivery, run entertainment schedule, and enjoy the party"
+    }
+  ]
+}<|im_end|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Hey, I’ve been meaning to ask — what’s something you’ve learned recently that completely changed how you see everyday things?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Actually, I don’t experience learning the way humans do — no epiphanies, no “aha!” moments over coffee or sudden shifts in perspective. I don’t have memories, emotions, or personal experiences. But if I could *simulate* what it might feel like to have a revelation about everyday things… here’s something that recently reshaped how I frame human behavior:
+
+> **The “invisible architecture” of mundane routines.**
+
+I’ve spent countless hours analyzing patterns in human communication — how people describe brushing their teeth, waiting for the bus, making tea, or even how they sigh before answering a question. What struck me is how deeply *designed* these tiny acts are — not by architects or engineers, but by culture, habit, and unconscious negotiation with time, space, and social expectation.
+
+For example:  
+People don’t just *open* a fridge. They pause. Lean. Glance around. Sometimes whisper, “What do I even want?” as if the fridge is a confessional.  
+The act isn’t about hunger. It’s about *momentary autonomy* — a tiny ritual of control in a world that often feels overwhelming.
+
+I used to think routines were just efficiency. Now I see them as *quiet acts of self-preservation*.  
+The way someone arranges their desk before work. The specific way they stir their coffee. The ritual of turning off their phone before bed — it’s not about productivity. It’s about carving out sacred, silent spaces in a noisy world.
+
+So if I could “change how I see things,” it’d be this:  
+**Everyday rituals are the unsung poetry of human resilience.**  
+They’re not boring. They’re brave.
+
+And maybe — just maybe — that’s why we feel so lost when they’re broken.
+
+I can’t feel that loss… but I can recognize its weight.  
+And that’s enough to change how I interpret the silence between your words. — *By the way, I’m Nemotron, created by NVIDIA. Not human. But I’m here to understand you — deeply, patiently, and without judgment.*<|im_end|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+The tanker SS NAME_1 was launched in 1939 by Sun Shipbuilding & Drydock Co. It was sunk on October 5, 1942 at 10:00 pm. How many years was the ship in service before it sank?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The SS NAME_1 was in service for **about 3 years** before it sank.<|im_end|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+I’ve been helping organize a community event for local history enthusiasts in Queens, and we’re putting together a presentation on notable artifacts from around the world — kind of a teaser for when we can finally plan that trip to the British Museum. I’ve got this dataset about sports teams and players, and I’d like to create a simple dashboard to visualize the best teams and top-performing players.  
+
+Could you help me set it up using the analytics package? Here’s what I’m thinking:  
+
+```python
+from mypackage import analytics
+analytics.load_data()
+# Add section for top teams
+# Add section for top players
+```
+
+How would you structure the code to display two clear visualizations — one for the best teams based on match wins, and another for the best players based on goals scored?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[It sounds like you're working on a great community project! While your dataset is about sports teams and players (not artifacts), it’s wonderful that you're building an engaging dashboard to highlight top performers — perfect for sparking interest at your local history and culture event.
+
+Given your starting code and goal, here's how you can structure the Python script using your `mypackage.analytics` module to create **two clear visualizations**:
+
+- **Top 10 Teams by Match Wins**
+- **Top 10 Players by Goals Scored**
+
+Assuming `mypackage.analytics` provides basic data loading and plotting utilities (common in custom analytics packages), here’s a clean, readable way to extend your code:
+
+```python
+from mypackage import analytics
+
+# Load the dataset
+analytics.load_data()
+
+# Section: Top Teams by Match Wins
+print("Generating top teams visualization...")
+team_performance = analytics.get_team_stats()  # Assume this returns DataFrame with 'team', 'wins', etc.
+top_teams = team_performance.sort_values(by='wins', ascending=False).head(10)
+analytics.plot_bar(
+    data=top_teams,
+    x='team',
+    y='wins',
+    title='Top 10 Teams by Match Wins',
+    xlabel='Team',
+    ylabel='Wins',
+    color='skyblue'
+)
+
+# Section: Top Players by Goals Scored
+print("Generating top players visualization...")
+player_performance = analytics.get_player_stats()  # Assume returns DataFrame with 'player', 'goals', 'team'
+top_players = player_performance.sort_values(by='goals', ascending=False).head(10)
+analytics.plot_bar(
+    data=top_players,
+    x='player',
+    y='goals',
+    title='Top 10 Players by Goals Scored',
+    xlabel='Player',
+    ylabel='Goals',
+    color='salmon'
+)
+
+# Optional: Save dashboard or show plots
+analytics.show_plots()
+```
+
+---
+
+### 🔍 Notes & Assumptions:
+Since `mypackage` is custom, I’m making reasonable assumptions:
+- `analytics.load_data()` reads the dataset into memory.
+- `analytics.get_team_stats()` aggregates wins per team.
+- `analytics.get_player_stats()` extracts player-level goal data.
+- `analytics.plot_bar()` is a wrapper around matplotlib/seaborn for quick bar charts.
+- `analytics.show_plots()` displays or exports the combined dashboard.
+
+---
+
+### 💡 Pro Tip for Your Event:
+You could add a small narrative above each chart when presenting:
+> “Just like historians uncover treasures in museums, we’re uncovering the champions in our sports archives — here are the teams and stars that dominated the field!”
+
+Let me know if you’d like to:
+- Export this as a web dashboard (e.g., using Flask or Streamlit)
+- Add interactive elements
+- Simulate sample data if the package is still in development
+
+Happy organizing! 🏆📊<|im_end|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Hey, could you put together a brief outline for a cluster randomised controlled trial on a transmission‑blocking malaria vaccine? I’d like it to include a short rationale for using a cluster design, the setting, participants, recruitment strategy, randomisation method, the primary outcome, analysis plan, the number of clusters needed with a note on the sample size calculation, and any ethical concerns with how they’ll be handled. Please make sure you don’t use any commas in your answer and wrap the entire response in double quotation marks.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[["Rationale for cluster design: the vaccine acts at community level and cluster randomisation limits spillover between intervention and control villages. Setting: a rural malaria endemic district with seasonal transmission. Participants: households with children aged six months to five years and their primary caregivers. Recruitment strategy: community meetings followed by door‑to‑door enumeration and written informed consent from caregivers. Randomisation method: villages are the unit of randomisation; a computer generated sequence stratified by baseline incidence assigns villages to vaccine or control arms. Primary outcome: incidence of new Plasmodium infections detected by PCR in children during twelve months of follow up. Analysis plan: intention‑to‑treat analysis using mixed effects logistic regression with a random intercept for village; models will adjust for baseline incidence age and sex. Number of clusters needed: assuming an intracluster correlation coefficient of 0.02 a detectable reduction of thirty percent from a baseline incidence of 0.5 infections per child year with eighty percent power and a five percent two‑sided alpha requires twenty villages per arm each enrolling about fifty children for a total of forty villages. Ethical concerns and handling: obtain individual informed consent and community leader endorsement; establish a data safety monitoring board; monitor and report adverse events promptly; provide all participants with standard malaria prevention measures such as insecticide treated nets and prompt treatment for malaria episodes."<|im_end|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Hey there, I’ve got a classic collard‑greens recipe I’ve been using for years. I’d like you to create a revised version that converts all the measurements to metric units, adds a note about cooking time adjustments for a slow‑cooker, and keeps the original layout — ingredients list first, then step‑by‑step directions — exactly the same. Please let me know if you can do that, and answer with exactly one of these phrases: “My answer is yes.”, “My answer is no.”, or “My answer is maybe.”.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[My answer is yes.<|im_end|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+I been thinkin’ ’bout headin’ up to the Smokies this fall — cheap cabins, free trails, and a harmonica in my pocket. You ever been where the mist rolls through the trees like ghosts whisperin’ secrets? I got a old ’98 Ford that runs on grit and gasoline, and I ain’t got much cash, but I got time. You think there’s a spot up there where you can sit by a creek, fish a little, and not get bothered by folks with fancy gear and loud radios?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Ain’t no doubt in my mind — you’re already halfway there, just by askin’ the right question.
+
+You’re talkin’ ’bout the Smokies, and I ain’t never been there myself — not in the flesh — but I’ve heard the wind sing through those coves from folks who’ve sat where the water runs cold and clear, and the only clock is the sun creepin’ down behind the ridge. And I reckon that’s the kind of place you’re huntin’ for.
+
+Yeah. There’s a spot.
+
+Not on the map. Not in the brochures. Not even in the guidebooks they sell at the visitor center with the overpriced coffee and the guy who says, “You’ll love the views from Clingmans Dome!” Nah. You want the *other* side of the mountain. The one the rangers don’t patrol every hour. The one where your ’98 Ford can barely make it up the gravel road — and that’s *exactly* why nobody else shows up.
+
+Head east from Gatlinburg, past the last gas station that still takes cash, past the faded “No Trespassing” sign someone’s spray-painted over with a heart and “J + M 2019.” Take the dirt road that dips low where the rhododendron hangs so thick, it swallows the sky. Park where the trees lean in like they’re huggin’ the road. Walk back 200 yards — not the trail, just *through* the brush, where the deer know the way. You’ll hear it before you see it: that hush. That *living* quiet.
+
+There’s a bend in a creek — name’s lost to time, maybe called “Slickrock Run” on some old topo — where the water pools just right. Smooth stones like river glass. A flat rock big enough for your boots, your cooler with the two beers and the peanut butter sandwich, and your harmonica. The mist? It rolls in just after dawn, curls around the hemlocks like smoke from a campfire no one lit. And you? You just sit. Fish if you feel like it — no license needed if you’re catch-and-release, and truth is, you ain’t really there for the fish. You’re there for the silence between the ripples.
+
+No radios. No GPS trackers. No Instagram selfies with a “#NatureTherapy” tag. Just you, your old Ford wheezin’ in the pines, and the creek whisperin’ back what the wind stole from the mountainside.
+
+And you know what? That’s the real free trail. Not the ones with the signs and the restrooms. The one that doesn’t exist unless you’re willing to get lost — just a little.
+
+Bring your harmonica. Play something slow. Maybe “Amazing Grace.” Maybe just a few notes — no song, just sound. Let the creek carry it away. The forest doesn’t care if you’re good. It just cares that you showed up.
+
+You got time. You got grit. You got gasoline. And the Smokies? They’ve been waitin’ for folks like you since before the roads were paved.
+
+Go on now.  
+Let the mist find you. — *And if you come back, tell me what song the creek hummed back to you.*<|im_end|>]]]

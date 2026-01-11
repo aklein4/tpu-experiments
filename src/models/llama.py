@@ -133,20 +133,15 @@ class LlamaMLP(nn.Module):
         self.hidden_size = config.hidden_size
         self.intermediate_size = config.intermediate_size
         
-        self.splits = [self.intermediate_size, self.intermediate_size]
-        self.gate_up_proj = nn.Linear(
-            self.hidden_size, sum(self.splits), bias=False
-        )
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
         
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
         self.act_fn = ACT2FN[config.hidden_act]
 
     # @xp.trace_me("LlamaMLP")
     def forward(self, x):
-        gate_up = self.gate_up_proj(x)
-        gate, up = torch.split(gate_up, self.splits, dim=-1)
-
-        down_proj = self.down_proj(self.act_fn(gate) * up)
+        down_proj = self.down_proj(self.act_fn(self.gate_proj(x)) * self.up_proj(x))
         return down_proj
 
 
@@ -194,18 +189,23 @@ class LlamaAttention(nn.Module):
                 f" and `num_heads`: {self.num_heads})."
             )
 
-        self.qkv_splits = [
-            self.num_heads * self.head_dim, 
-            self.num_key_value_heads * self.head_dim,
-            self.num_key_value_heads * self.head_dim,
-        ]
-        self.qkv_proj = nn.Linear(
+        self.q_proj = nn.Linear(
             self.hidden_size,
-            sum(self.qkv_splits),
+            self.num_heads * self.head_dim,
+            bias=config.attention_bias,
+        )
+        self.k_proj = nn.Linear(
+            self.hidden_size,
+            self.num_key_value_heads * self.head_dim,
+            bias=config.attention_bias,
+        )
+        self.v_proj = nn.Linear(
+            self.hidden_size,
+            self.num_key_value_heads * self.head_dim,
             bias=config.attention_bias,
         )
         self.o_proj = nn.Linear(
-            self.num_heads * self.head_dim, self.hidden_size, bias=config.attention_bias
+            self.hidden_size, self.hidden_size, bias=config.attention_bias
         )
 
     # @xp.trace_me("LlamaAttention")
@@ -219,10 +219,9 @@ class LlamaAttention(nn.Module):
     ) -> torch.FloatTensor:
         bsz, q_len, _ = hidden_states.shape
 
-        qkv_states = self.qkv_proj(hidden_states)
-        query_states, key_states, value_states = torch.split(
-            qkv_states, self.qkv_splits, dim=-1
-        )
+        query_states = self.q_proj(hidden_states)
+        key_states = self.k_proj(hidden_states)
+        value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(
             bsz, q_len, self.num_heads, self.head_dim
@@ -280,7 +279,6 @@ class LlamaDecoderLayer(nn.Module):
         position_ids: torch.Tensor | None = None,
         position_embeddings: tuple[torch.Tensor, torch.Tensor] | None = None,    # necessary, but kept here for BC
         elementwise_attention_bias: torch.Tensor | None = None,
-        **extra_kwargs,
     ) -> torch.Tensor:
         """
         Args:
@@ -357,10 +355,9 @@ class LlamaModel(nn.Module):
         self,
         input_ids: torch.LongTensor | None = None,
         inputs_embeds: torch.FloatTensor | None = None,
-        attention_mask: torch.FloatTensor | None = None,
+        attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         position_ids: torch.LongTensor | None = None,
         elementwise_attention_bias: torch.LongTensor | None = None,
-        **extra_kwargs,
     ) -> torch.Tensor:
         assert (input_ids is not None) ^ (inputs_embeds is not None), (
             "You have to specify either input_ids or inputs_embeds, but not both."
@@ -403,7 +400,6 @@ class LlamaModel(nn.Module):
             position_ids=position_ids,
             position_embeddings=position_embeddings,
             elementwise_attention_bias=elementwise_attention_bias,
-            **extra_kwargs,
         )
 
         hidden_states = self.norm(hidden_states)
@@ -419,8 +415,6 @@ class LlamaForCausalLM(nn.Module):
 
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
-
-        self.lr_scaler = math.sqrt(config.hidden_size)
 
         # Initialize weights and apply final processing
         self.apply(self._init_weights)
@@ -442,13 +436,12 @@ class LlamaForCausalLM(nn.Module):
         self,
         input_ids: torch.LongTensor,
         labels: torch.LongTensor | None = None,
-        attention_mask: torch.FloatTensor | None = None,
+        attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         shift_states: bool = False,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         
-        inputs_embeds = self.model.embed_tokens(input_ids) * self.lr_scaler
         hidden_states = self.model(
-            inputs_embeds=inputs_embeds,
+            input_ids=input_ids,
             attention_mask=attention_mask
         )
 

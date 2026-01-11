@@ -1,3 +1,9 @@
 
 [1/23] Goedel-LM--Goedel-Pset-v1: SUCCESS (1_713_126 examples, 659_929_585 tokens)
 [2/23] HuggingFaceTB--smoltalk--all: SUCCESS (1_017_863 examples, 419_066_235 tokens)
+[3/23] HuggingFaceTB--smoltalk2--SFT: SUCCESS (2_028_452 examples, 1_023_437_717 tokens)
+[4/23] OpenDataArena--ODA-Math-460k: SUCCESS (428_610 examples, 271_216_906 tokens)
+[5/23] TIGER-Lab--MATH-plus: SUCCESS (892_633 examples, 275_717_949 tokens)
+[6/23] TIGER-Lab--WebInstructSub: SUCCESS (2_326_119 examples, 834_483_845 tokens)
+[7/23] allenai--sciq: SUCCESS (11_679 examples, 1_889_718 tokens)
+[8/23] facebook--natural_reasoning: SUCCESS (936_899 examples, 732_347_448 tokens)

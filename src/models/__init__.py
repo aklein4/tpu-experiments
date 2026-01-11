@@ -14,7 +14,7 @@ from utils import constants
 def load_checkpoint(
     url: str,
     step: int,
-    attention_kernel: str = "other",
+    attention_kernel: str = "other", # uses non-kernel attention by default
 ):
     
     subfolder = f"{step:012d}"

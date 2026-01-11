@@ -331,7 +331,6 @@ def convert_to_safetensors_on_cpu(model: torch.nn.Module, save_dir: Path) -> Non
     state_dict=reload_sd,
     storage_reader=dist_cp.FileSystemReader(str(save_dir)),
     planner=xc.SPMDLoadPlanner(),
-    # no_dist=True,
   )
   logger.info("Checkpoint fully materialised on CPU")
 
@@ -488,4 +487,3 @@ def save_hf_tokenizer(model_path_or_repo: str, save_dir: Path) -> None:
   save_dir = Path(save_dir)
   save_dir.mkdir(parents=True, exist_ok=True)
   tokenizer.save_pretrained(save_dir)
-  

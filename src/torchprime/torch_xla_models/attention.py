@@ -44,7 +44,7 @@ class AttentionModule(nn.Module):
     query_states: torch.Tensor,  # (batch_size, num_heads, q_len, head_dim)
     key_states: torch.Tensor,  # (batch_size, num_kv_heads, kv_len, head_dim)
     value_states: torch.Tensor,  # (batch_size, num_kv_heads, kv_len, head_dim)
-    attention_mask: torch.Tensor | None = None,
+    attention_mask: torch.Tensor | None = None, # only used in non-kernel attention
   ):
     if self.config.attention_kernel != "splash_attention":
       num_key_value_groups = (

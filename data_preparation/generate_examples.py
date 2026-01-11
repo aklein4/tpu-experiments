@@ -3,16 +3,22 @@ import datasets
 from tqdm import tqdm
 import os
 
+from transformers import AutoTokenizer
+
+
 URL = "aklein4/compilation-SmolLM2"
 OUTPUT_DIR = "data_statistics"
+
+TOKENIZER_URL = "./tokenizer"
 
 NUM_EXAMPLES = 10
 
 
 def main():
     
-    subsets = list(datasets.get_dataset_config_names(URL))
+    tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_URL)
 
+    subsets = list(datasets.get_dataset_config_names(URL))
     for subset in tqdm(subsets):
 
         with open(os.path.join(OUTPUT_DIR, subset, "examples.txt"), "w", encoding="utf-8") as f:
@@ -23,10 +29,10 @@ def main():
                 f.write(f"\n\n ========== Example {i} ==========")
 
                 f.write("\n\n --- Input --- \n\n")
-                f.write("[[["+example["input"]+"]]]")
+                f.write("[[["+tokenizer.decode(example["input_ids"], skip_special_tokens=False)+"]]]")
 
                 f.write("\n\n --- Output --- \n\n")
-                f.write("[[["+example["output"]+"]]]")
+                f.write("[[["+tokenizer.decode(example["output_ids"], skip_special_tokens=False)+"]]]")
 
                 if i + 1 >= NUM_EXAMPLES:
                     break

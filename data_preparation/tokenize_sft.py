@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import json
 
 import datasets
-from transformers import AutoTokenizer, LlamaTokenizerFast
+from transformers import AutoTokenizer, GPT2TokenizerFast
 
 
 STAT_DIR = "data_statistics"
@@ -21,10 +21,14 @@ TOKENIZER = './tokenizer'
 INPUT_REPO = "aklein4/raw-compilation"
 OUTPUT_REPO = "aklein4/compilation-SmolLM2"
 
+SKIP_SUBSETS = [
+    "nvidia--Llama-Nemotron-Post-Training-Dataset--SFT",
+]
+
 DEBUG = False
 
 
-def tokenize_example(example, tokenizer: LlamaTokenizerFast=None):
+def tokenize_example(example, tokenizer: GPT2TokenizerFast=None):
 
     input_tokens = tokenizer(
         example["input"],
@@ -48,11 +52,17 @@ def tokenize_example(example, tokenizer: LlamaTokenizerFast=None):
     input_tokens = input_tokens.astype(np.uint16)
     output_tokens = output_tokens.astype(np.uint16)
 
+    input_mask = input_tokens != tokenizer.pad_token_id
     input_tokens = [
-        t[t != tokenizer.pad_token_id][:-1] for t in input_tokens # Exclude pad and EOS
+        t[input_mask[i]] for i, t in enumerate(input_tokens)
     ]
+    output_mask = output_tokens != tokenizer.pad_token_id
     output_tokens = [
-        t[t != tokenizer.pad_token_id][1:] for t in output_tokens # Exclude pad and BOS
+        t[output_mask[i]] for i, t in enumerate(output_tokens)
+    ]
+
+    output_tokens = [
+        (np.append(t, tokenizer.eos_token_id) if t[-1] != tokenizer.eos_token_id else t) for t in output_tokens
     ]
 
     out = {
@@ -71,7 +81,7 @@ def tokenize_example(example, tokenizer: LlamaTokenizerFast=None):
 def tokenize_subset(
     url: str,
     subset: str,
-    tokenizer: LlamaTokenizerFast,
+    tokenizer: GPT2TokenizerFast,
 ):
     
     data = datasets.load_dataset(url, subset, split="train")
@@ -156,7 +166,11 @@ def main():
         f.write("")
 
     subsets = datasets.get_dataset_config_names(INPUT_REPO)
-    # subsets = ["allenai--sciq"]
+    for s in SKIP_SUBSETS:
+        if s in subsets:
+            subsets.remove(s)
+        else:
+            raise ValueError(f"Removal subset {s} not found in subset list.")
 
     total_examples = 0
     total_tokens = 0

@@ -58,6 +58,7 @@ def main(config: omegaconf.DictConfig):
     transformers.utils.logging.enable_explicit_format()
 
     # set training seeds
+    torch.manual_seed(config.seed)
     transformers.set_seed(config.seed)
     torch_xla.manual_seed(config.seed)
 

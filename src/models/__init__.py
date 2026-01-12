@@ -15,6 +15,7 @@ def load_checkpoint(
     url: str,
     step: int,
     attention_kernel: str = "other", # uses non-kernel attention by default
+    remove_folder: bool = False,
 ):
     
     subfolder = f"{step:012d}"
@@ -40,6 +41,9 @@ def load_checkpoint(
     state_dict = torch.load(state_path, map_location="cpu")
 
     model.load_state_dict(state_dict, strict=True)
+
+    if remove_folder:
+        shutil.rmtree(save_path, ignore_errors=True)
 
     return model
 

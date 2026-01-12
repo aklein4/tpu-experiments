@@ -138,5 +138,11 @@ collators/
  - mark pure modules (that don't modify state in forward pass) for improved compilation and tracing
  - add_activation_checkpointing_and_scan
    - TODO: this logic is convoluted
+   - TODO: which modules should have activation sharding?
+   - TODO: how can this work with multiple transformers in a model?
  - add_optimization_barriers
    - modifies forward pass to add optimization barrier to every module of type listed in remat_config.optimization_barrier_layers
+
+# Questions
+ - What is the deal with dtypes?
+ - What is the difference between the device syncing methods (xm.rendevous...)?
